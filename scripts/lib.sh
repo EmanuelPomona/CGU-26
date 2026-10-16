@@ -3,13 +3,15 @@
 
 repo_root() { git rev-parse --show-toplevel 2>/dev/null; }
 
+# Strip the "worktree " prefix rather than taking awk's $2, which would cut a
+# path containing spaces at the first space.
 main_worktree() {
-  git worktree list --porcelain | awk '/^worktree /{print $2; exit}'
+  git worktree list --porcelain | sed -n '/^worktree /{s/^worktree //p;q;}'
 }
 
 # All worktree paths, one per line.
 worktree_paths() {
-  git worktree list --porcelain | awk '/^worktree /{print $2}'
+  git worktree list --porcelain | sed -n 's/^worktree //p'
 }
 
 branch_of() { git -C "$1" rev-parse --abbrev-ref HEAD 2>/dev/null; }

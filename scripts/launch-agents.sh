@@ -23,7 +23,8 @@ for i in "${!CMDS[@]}"; do printf '# %s\n%s\n\n' "${LABELS[$i]}" "${CMDS[$i]}"; 
 
 if [ "${1:-}" = "--open" ] && [ "$(uname)" = "Darwin" ]; then
   for c in "${CMDS[@]}"; do
-    osascript -e "tell application \"Terminal\" to do script \"$c\"" >/dev/null
+    esc="${c//\\/\\\\}"; esc="${esc//\"/\\\"}"   # escape for an AppleScript string
+    osascript -e "tell application \"Terminal\" to do script \"$esc\"" >/dev/null
   done
   echo "opened $(( ${#CMDS[@]} )) Terminal windows"
 else

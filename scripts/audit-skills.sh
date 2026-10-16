@@ -6,7 +6,9 @@
 set -uo pipefail
 WT="${1:-$PWD}"
 WT="$(cd "$WT" 2>/dev/null && pwd)" || { echo "no such worktree: ${1:-$PWD}" >&2; exit 1; }
-SLUG="$(printf '%s' "$WT" | sed 's|^/||; s|/|-|g; s|^|-|')"
+# Claude Code names the transcript dir by replacing every non-alphanumeric
+# character (slashes AND spaces) with '-'.
+SLUG="$(printf '%s' "$WT" | sed 's|[^A-Za-z0-9]|-|g')"
 python3 - "$HOME/.claude/projects/$SLUG" "$WT" <<'PY'
 import json,glob,os,re,sys
 d,wt=sys.argv[1],sys.argv[2]
