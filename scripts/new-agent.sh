@@ -26,7 +26,7 @@ git show-ref --verify --quiet "refs/heads/$BR" && die "branch $BR already exists
 printf '# STATUS: %s\nTask: unassigned\nRound: 0\nLast updated: %s\n\n## Skills invoked so far\n\n## Done\n\n## In progress\n- [ ] awaiting task assignment in docs/tasks/\n\n## Verified\n\n## Blocked on\n- nothing\n' \
   "$BR" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "docs/status/$(slug_of "$BR").md"
 git add "docs/status/$(slug_of "$BR").md"
-git -c user.email="agent@local" -c user.name="template" commit -q -m "chore: add slice agent $SLICE"
+git commit -q -m "chore: add slice agent $SLICE"   # your own git identity, so GitHub credits you
 
 git worktree add --quiet "$DEST" -b "$BR" HEAD || die "worktree creation failed"
 ./scripts/sync.sh >/dev/null 2>&1 || true   # bring the other worktrees level

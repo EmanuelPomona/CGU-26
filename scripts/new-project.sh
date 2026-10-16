@@ -27,7 +27,7 @@ for br in "${BRANCHES[@]}"; do
     "$br" "$NOW" > "docs/status/${br//\//-}.md"
 done
 git add -A
-git -c user.email="agent@local" -c user.name="template" commit -q -m "chore: initialize $NAME from template"
+git commit -q -m "chore: initialize $NAME from template"   # your own git identity, so GitHub credits you
 BASE="$(git rev-parse HEAD)"
 
 for b in frontend backend reviewer; do
