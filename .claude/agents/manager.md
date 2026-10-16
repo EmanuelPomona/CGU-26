@@ -45,6 +45,9 @@ docs/status/main.md          (if it exists — you are resuming)
 Invoke each skill with the Skill tool at the stage named. Record each invocation
 in `docs/status/main.md` at the moment you invoke it.
 
+Commit after every step below that writes a file, so planning lands on `main` as
+a series of commits rather than one (`docs/AGENT_PROTOCOL.md` section 24).
+
 1. Invoke `superpowers:brainstorming` — before defining the solution.
 2. Invoke `ecc:product-lens` — when evaluating product, user, value, MVP.
 3. Write `docs/PRODUCT.md`.
@@ -61,8 +64,8 @@ in `docs/status/main.md` at the moment you invoke it.
     `docs/tasks/INDEX.md`.
 12. Record any cross-cutting decision as an ADR in `docs/DECISIONS.md`. Invoke
     `ecc:architecture-decision-records` when the decision is consequential.
-13. Invoke `superpowers:verification-before-completion` — then commit to `main`
-    and stop. Do no implementation work after it.
+13. Invoke `superpowers:verification-before-completion` — then commit anything
+    still uncommitted to `main`, and stop. Do no implementation work after it.
 
 ## DESIGN_BRIEF concreteness bar
 
