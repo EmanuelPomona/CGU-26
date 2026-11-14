@@ -1,7 +1,7 @@
 # STATUS: agent/backend
 Task: TASK-001..006 in REVIEW; HANDOFF-1..3 written
 Round: 0
-Last updated: 2026-11-14T13:10:00-08:00
+Last updated: 2026-11-14T13:20:00-08:00
 
 ## Skills invoked so far
 - ecc:backend-patterns @ TASK-001 start -> layered design: thin routers, pure engine, one in-memory Store; one centralized error handler
@@ -43,6 +43,7 @@ Last updated: 2026-11-14T13:10:00-08:00
 - seed day at 08:00: 6 on_time, 1 tight (C-105, slack 14), 0 at_risk -> python print in session
 - `python3 -m pytest -q` -> 151 passed (at 967627b)
 - no shipment has three distinct role winners on any preset or clock (searched); reported in HANDOFF-3
+- widened-pool check (keep + all bundled alternatives), read-only script, no code change: normal day 08:00 and close60 confirmed -> max 2 distinct winners per shipment (C-103, C-104, C-107). Manager rule: stay with 967627b
 - schemathesis 4.33.4 (scratch venv) vs live 8012: 717 cases, only 3 ST202 left = documented semantic rules (kind companions, override reason, all-zero weights)
 - live service on 8012 answers /api/board with 7 shipments
 
