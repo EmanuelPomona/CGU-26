@@ -9,6 +9,10 @@ Last updated: 2026-11-14T11:46-08:00
 - ui-ux-pro-max:ui-ux-pro-max @ before shell styling -> targeted ux queries (focus 2px solid+offset, color-not-only, 8px gaps / 44px targets on mobile, mobile table -> 2-line rows); contrast check found brief's tight #A8690F = 4.14:1 on panel (<4.5); manager then fixed the brief on main (#985F0E), adopted
 - design-taste-frontend @ anti-generic critique of the direction -> skill self-declares out of scope for dashboards (s13), applied cross-cutting checks only: no status dots, radius rule (0 rules / 2px controls), "Suggested" as bold word not pill, zero em/en dashes, skeleton loading at final widths, dark mode intentionally not built (brief = single light projected palette); stack defaults (Tailwind/Motion/icon libs) overridden by ARCHITECTURE
 
+- superpowers:test-driven-development @ before format.ts / strip.ts -> tests written first, watched fail (module missing), then implemented; num/pct were written before tests (violation) -> tests added and proven to fail against a broken impl
+- ecc:vite-patterns @ before components -> confirmed tsc -b runs before vite build; only VITE_API_BASE_URL/VITE_USE_MOCK exposed; mock as lazy chunk (no top-level await)
+- ecc:react-patterns @ before components -> state lifted to App (no context), derived status in render, seq-guarded fetches, Leaflet imperative via ref
+
 ## Done
 - [x] Read protocol, routing, product, brief, constraints, architecture, API, openapi, acceptance, TASK-101..106
 - [x] Brief is concrete (references, type pairing with reason, semantic palette, signature element, anti-character): not blocked on brief
@@ -30,9 +34,5 @@ Last updated: 2026-11-14T11:46-08:00
 
 ## Verified
 
-- superpowers:test-driven-development @ before format.ts / strip.ts -> tests written first, watched fail (module missing), then implemented; num/pct were written before tests (violation) -> tests added and proven to fail against a broken impl
-- ecc:vite-patterns @ before components -> confirmed tsc -b runs before vite build; only VITE_API_BASE_URL/VITE_USE_MOCK exposed; mock as lazy chunk (no top-level await)
-- ecc:react-patterns @ before components -> state lifted to App (no context), derived status in render, seq-guarded fetches, Leaflet imperative via ref
-
 ## Blocked on
-- nothing (backend not yet serving; building against VITE_USE_MOCK=1)
+- nothing. Backend serves read endpoints at :8012; disruptions/options/decisions not yet live, so those flows run on VITE_USE_MOCK=1
