@@ -18,7 +18,10 @@ export function VerifyPrompt({ board, apply }: Props) {
   const [busy, setBusy] = useState<Verification | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const queue = board.pending_verification_ids.filter((id) => !skipped.includes(id));
+  const pending = board.pending_verification_ids;
+  const stillSkipped = skipped.filter((id) => pending.includes(id));
+  if (stillSkipped.length !== skipped.length) setSkipped(stillSkipped);
+  const queue = pending.filter((id) => !stillSkipped.includes(id));
   const d = board.disruptions.find((x) => x.id === queue[0]);
   if (!d) return null;
 

@@ -104,3 +104,4 @@
   .legend:not([open]) ul, .legend:not([open]) .legend-toggle { display: none; }
 }
 .mapview.is-collapsed .mk-label { display: none; }
+.hatch-defs { position: absolute; width: 0; height: 0; overflow: hidden; }

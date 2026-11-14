@@ -87,7 +87,7 @@ export function OptionLabel({ option: o, normal, scale, isKeep, action, picked, 
             <>
               <span className={`ol-status-word ol-status-${e.status}`}>{STATUS_WORD[e.status]}</span>
               {e.needs_review && <span className="ol-unverified"> Unverified</span>}
-              {!isKeep && d.on_time_probability !== 0 && (
+              {!isKeep && Math.round(d.on_time_probability * 100) !== 0 && (
                 <span className={`ol-delta ${d.on_time_probability < 0 ? 'ol-worse' : 'ol-better'}`}>
                   {signed(Math.round(d.on_time_probability * 100), 'pts')} vs keep
                 </span>

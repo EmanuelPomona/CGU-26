@@ -133,7 +133,8 @@ export function MapView(props: Props) {
         alt: w.name,
       })
         .bindTooltip(w.id, { permanent: true, direction: 'right', className: 'mk-label', offset: [9, 0] })
-        .on('click', () => {
+        .on('click', (e: L.LeafletMouseEvent) => {
+          if (placingRef.current) return onPlaceRef.current({ lat: e.latlng.lat, lng: e.latlng.lng });
           const rows = boardRef.current.shipments.filter((s) => s.warehouse_id === w.id);
           if (!rows.length) return;
           const i = rows.findIndex((r) => r.id === selectedRef.current);
@@ -163,7 +164,9 @@ export function MapView(props: Props) {
       if (prev && prev.routeId === row.route.id) continue;
       if (prev) g.removeLayer(prev.line);
       const line = L.polyline(row.route.geometry as L.LatLngTuple[], { interactive: true, bubblingMouseEvents: false })
-        .on('click', () => onSelectRef.current(row.id))
+        .on('click', (e: L.LeafletMouseEvent) =>
+          placingRef.current ? onPlaceRef.current({ lat: e.latlng.lat, lng: e.latlng.lng }) : onSelectRef.current(row.id),
+        )
         .bindTooltip(`${row.id}: ${row.route.label}${row.route.estimated ? ' (estimated path)' : ''}`, { sticky: true });
       line.addTo(g);
       lines.set(row.id, { line, routeId: row.route.id });
@@ -281,6 +284,16 @@ export function MapView(props: Props) {
         </button>
       )}
       <Legend showPlaces={showPlaces} onTogglePlaces={() => setShowPlaces((x) => !x)} />
+      {/* Always rendered (never inside the collapsible legend): Leaflet paths and the legend both
+          reference it via fill="url(#hatch-unverified)". */}
+      <svg className="hatch-defs" width="0" height="0" aria-hidden="true" focusable="false">
+        <defs>
+          <pattern id="hatch-unverified" patternUnits="userSpaceOnUse" width="7" height="7" patternTransform="rotate(45)">
+            <rect width="7" height="7" fill="rgb(75 79 166 / 0.06)" />
+            <line x1="0" y1="0" x2="0" y2="7" stroke={COLORS.unverified} strokeWidth="1.5" strokeOpacity="0.45" />
+          </pattern>
+        </defs>
+      </svg>
     </div>
   );
 }
@@ -315,15 +328,6 @@ function Legend({ showPlaces, onTogglePlaces }: { showPlaces: boolean; onToggleP
       <label className="legend-toggle">
         <input type="checkbox" checked={showPlaces} onChange={onTogglePlaces} /> Sensitive places
       </label>
-      {/* Global pattern referenced by Leaflet paths via fill="url(#hatch-unverified)". */}
-      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
-        <defs>
-          <pattern id="hatch-unverified" patternUnits="userSpaceOnUse" width="7" height="7" patternTransform="rotate(45)">
-            <rect width="7" height="7" fill="rgb(75 79 166 / 0.06)" />
-            <line x1="0" y1="0" x2="0" y2="7" stroke={COLORS.unverified} strokeWidth="1.5" strokeOpacity="0.45" />
-          </pattern>
-        </defs>
-      </svg>
     </details>
   );
 }

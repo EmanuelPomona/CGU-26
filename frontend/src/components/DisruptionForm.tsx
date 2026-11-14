@@ -108,7 +108,7 @@ export function DisruptionForm({
     <form className="cond-form" onSubmit={start} noValidate>
       <div className="form-row">
         <Field id="pl-kind" label="Kind">
-          <select id="pl-kind" value={kind} onChange={(e) => setKind(e.target.value as PlaceDraft['kind'])}>
+          <select id="pl-kind" disabled={!!placing} value={kind} onChange={(e) => setKind(e.target.value as PlaceDraft['kind'])}>
             {AREA_KINDS.map((k) => (
               <option key={k.value} value={k.value}>
                 {k.label}
@@ -119,6 +119,7 @@ export function DisruptionForm({
         <Field id="pl-radius" label="Radius, km" error={err('radius_km')}>
           <input
             id="pl-radius"
+            disabled={!!placing}
             inputMode="decimal"
             value={radius}
             onChange={(e) => setRadius(e.target.value)}
@@ -132,6 +133,7 @@ export function DisruptionForm({
           <Field id="pl-factor" label="Travel time x" error={err('slowdown_factor')}>
             <input
               id="pl-factor"
+              disabled={!!placing}
               inputMode="decimal"
               value={factor}
               onChange={(e) => setFactor(e.target.value)}
@@ -143,6 +145,7 @@ export function DisruptionForm({
         <Field id="pl-conf" label="Confidence, %" error={err('confidence')}>
           <input
             id="pl-conf"
+            disabled={!!placing}
             inputMode="numeric"
             value={confidence}
             onChange={(e) => setConfidence(e.target.value)}
@@ -152,7 +155,7 @@ export function DisruptionForm({
         </Field>
       </div>
       <Field id="pl-label" label="Label (optional)" error={err('label')}>
-        <input id="pl-label" value={label} maxLength={80} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Crash on SR-91 at Euclid" />
+        <input id="pl-label" disabled={!!placing} value={label} maxLength={80} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Crash on SR-91 at Euclid" />
       </Field>
       {!placing ? (
         <button type="submit" className="btn" disabled={disabled}>

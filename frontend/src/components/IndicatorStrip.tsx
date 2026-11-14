@@ -26,7 +26,9 @@ interface Props {
 
 function Cell({ col, values, normal, isNormal }: { col: (typeof COLUMNS)[number]; values: Indicators; normal: Indicators; isNormal: boolean }) {
   const v = values[col.key];
-  const d = v - normal[col.key];
+  // Display arithmetic only: the difference of the two figures as printed, so they always add up.
+  const round = (x: number) => Number(x.toFixed(col.money ? 0 : col.decimals));
+  const d = round(round(v) - round(normal[col.key]));
   const worse = col.better === 'lower' ? d > 0 : d < 0;
   const shown = Number(Math.abs(d).toFixed(col.decimals)) !== 0;
   return (

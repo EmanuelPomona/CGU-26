@@ -75,6 +75,7 @@ export function Options({ board, row, scale, apply, setBoard, onPreview, sheet, 
   const choose = async (o: ResponseOption, withReason?: string) => {
     if (!row) return;
     if (!o.suggested && withReason === undefined) {
+      if (reasonFor !== o.id) setReason('');
       setReasonFor(o.id);
       setReasonError(null);
       return;
@@ -160,7 +161,16 @@ export function Options({ board, row, scale, apply, setBoard, onPreview, sheet, 
             <button type="submit" className="btn btn-primary" disabled={busy}>
               {submitting === o.id ? 'Saving…' : 'Choose with this reason'}
             </button>
-            <button type="button" className="btn" disabled={busy} onClick={() => setReasonFor(null)}>
+            <button
+              type="button"
+              className="btn"
+              disabled={busy}
+              onClick={() => {
+                setReasonFor(null);
+                setReason('');
+                setReasonError(null);
+              }}
+            >
               Cancel
             </button>
           </div>

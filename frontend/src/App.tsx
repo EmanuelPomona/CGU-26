@@ -129,7 +129,7 @@ export default function App() {
           <button type="button" className="btn" aria-pressed={view === 'board'} onClick={() => setView('board')}>
             Board
           </button>
-          <button type="button" className="btn" aria-pressed={view === 'method'} onClick={() => setView('method')}>
+          <button type="button" className="btn" aria-pressed={view === 'method'} onClick={() => { setPlacing(null); setView('method'); }}>
             Method
           </button>
         </nav>

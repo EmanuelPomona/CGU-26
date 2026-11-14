@@ -20,7 +20,7 @@ interface Props {
 export function Board({ board, network, scale, selectedId, onSelect }: Props) {
   const driver = (truckId: string | null) =>
     truckId ? (network?.trucks.find((t) => t.id === truckId)?.driver_label ?? '') : '';
-  const atRisk = board.shipments.filter((s) => s.current.status === 'at_risk').length;
+  const atRisk = board.indicators.decided.shipments_at_risk;
 
   return (
     <div className="board">

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createSequence } from '../lib/sequence';
 import { ApiError, getBoard } from './client';
 import type { Board } from './types';
 
@@ -22,49 +23,49 @@ export function useBoard(): BoardState {
   const [board, setBoard] = useState<Board | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
-  const seq = useRef(0);
+  // Every response replaces the whole board, so apply one only if it is newer than the last applied.
+  const seq = useRef(createSequence());
+
+  const accept = useCallback((n: number, b: Board) => {
+    if (!seq.current.accept(n)) return;
+    setBoard(b);
+    setError(null);
+  }, []);
 
   const load = useCallback(async () => {
-    const n = ++seq.current;
+    const n = seq.current.issue();
     setLoading(true);
     try {
-      const b = await getBoard();
-      if (n !== seq.current) return;
-      setBoard(b);
-      setError(null);
+      accept(n, await getBoard());
     } catch (e) {
-      if (n === seq.current) setError(toApiError(e));
+      setError(toApiError(e));
     } finally {
-      if (n === seq.current) setLoading(false);
+      setLoading(false);
     }
-  }, []);
+  }, [accept]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const apply = useCallback(async (request: () => Promise<Board>) => {
-    const n = ++seq.current;
-    try {
-      const b = await request();
-      if (n === seq.current) {
-        setBoard(b);
-        setError(null);
+  const apply = useCallback(
+    async (request: () => Promise<Board>) => {
+      const n = seq.current.issue();
+      try {
+        const b = await request();
+        accept(n, b);
+        return b;
+      } catch (e) {
+        const err = toApiError(e);
+        // Server unreachable mid-session: surface it globally but keep the last good board.
+        if (err.status === 0) setError(err);
+        throw err;
       }
-      return b;
-    } catch (e) {
-      const err = toApiError(e);
-      // Server unreachable mid-session: surface it globally but keep the last good board.
-      if (err.status === 0 && n === seq.current) setError(err);
-      throw err;
-    }
-  }, []);
+    },
+    [accept],
+  );
 
-  const set = useCallback((b: Board) => {
-    ++seq.current;
-    setBoard(b);
-    setError(null);
-  }, []);
+  const set = useCallback((b: Board) => accept(seq.current.issue(), b), [accept]);
 
   return { board, loading: loading && board === null, error, retry: () => void load(), apply, set };
 }
