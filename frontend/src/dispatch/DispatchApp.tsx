@@ -140,7 +140,10 @@ function explain(o: ResponseOption, rationale: string): string[] {
   if (o.suggested) out.push(rationale);
   out.push(o.description);
   out.push(o.evaluation.community_detail);
-  for (const b of o.burdens) out.push(`${STAKE[b.stakeholder]}: ${b.text}`);
+  for (const b of o.burdens) {
+    const who = STAKE[b.stakeholder];
+    out.push(b.text.toLowerCase().startsWith(who.toLowerCase()) ? b.text : `${who}: ${b.text}`);
+  }
   out.push(...o.notes);
   out.push(...o.evaluation.flags);
   if (!o.feasible && o.infeasible_reason) out.push(o.infeasible_reason);
@@ -272,7 +275,11 @@ export default function DispatchApp() {
   const decision: Decision | undefined = board?.decisions.find((d) => d.shipment_id === selectedId);
   const roleOpts = ROLE_ORDER.map((role) => ({ role, o: opts?.options.find((x) => x.roles.includes(role)) ?? null }));
   const pickedOpt = opts?.options.find((x) => x.id === pickedId) ?? roleOpts.find((x) => x.role === focusRole)?.o ?? null;
-  const others = opts?.options.filter((x) => x.kind !== 'keep' && x.kind !== 'reroute') ?? [];
+  // Everything that is not a role card: routes holding no role, and (when the row needs attention) the
+  // non-route responses. The server's suggestion is always shown, whatever it is.
+  const needsAttention = row?.attention === 'act' || row?.attention === 'watch';
+  const others =
+    opts?.options.filter((x) => x.roles.length === 0 && (x.suggested || x.kind === 'keep' || x.kind === 'reroute' || needsAttention)) ?? [];
   const explainOpt = opts?.options.find((x) => x.id === explainId) ?? null;
   const t = ONROUTE.find((x) => x.id === probId)!;
   const p = PROB[probId];
@@ -366,7 +373,7 @@ export default function DispatchApp() {
             <ul>
               {o.burdens.map((b, i) => (
                 <li key={i}>
-                  <b>{STAKE[b.stakeholder]}:</b> {b.text}
+                  {b.text.toLowerCase().startsWith(STAKE[b.stakeholder].toLowerCase()) ? b.text : <><b>{STAKE[b.stakeholder]}:</b> {b.text}</>}
                 </li>
               ))}
             </ul>
@@ -539,7 +546,7 @@ export default function DispatchApp() {
                 <>
                   {opts.suggested_option_id && (
                     <div className="alert ok">
-                      <b>Suggested:</b> {opts.rationale}
+                      <b>Suggested:</b> {opts.rationale.replace(/^Suggested:\s*/, '')}
                       <div className="src">Rule-based score from the dispatch priorities. You decide.</div>
                     </div>
                   )}
@@ -565,7 +572,7 @@ export default function DispatchApp() {
                     </div>
                   )}
                   {roleOpts.map(roleCard)}
-                  {(row.attention === 'act' || row.attention === 'watch') && others.length > 0 && (
+                  {others.length > 0 && (
                     <>
                       <h4>Other responses</h4>
                       {others.map((o) => (
@@ -610,7 +617,7 @@ export default function DispatchApp() {
                             <ul>
                               {o.burdens.map((b, i) => (
                                 <li key={i}>
-                                  <b>{STAKE[b.stakeholder]}:</b> {b.text}
+                                  {b.text.toLowerCase().startsWith(STAKE[b.stakeholder].toLowerCase()) ? b.text : <><b>{STAKE[b.stakeholder]}:</b> {b.text}</>}
                                 </li>
                               ))}
                             </ul>
