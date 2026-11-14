@@ -1,7 +1,7 @@
 # STATUS: main
-Task: planning (Mode A) complete
+Task: integration (Mode B) complete; awaiting reviewer
 Round: 0
-Last updated: 2026-11-14T19:25:00Z
+Last updated: 2026-11-14T21:10:00Z
 
 ## Skills invoked so far
 - superpowers:brainstorming @ before defining the solution -> read all supplied resources first; first message echoes the request and asks one question instead of jumping to docs
@@ -28,14 +28,12 @@ Last updated: 2026-11-14T19:25:00Z
 
 - [x] Both workers report done (claims, not yet verified by the manager)
 
+- [x] Mode B integration done in THIS session at the owner's explicit request ("merge everything ... and push"), not a fresh one. integrate.sh merged agent/backend (a4c2ac6, 25 commits) then agent/frontend (c4825cf, 54 commits) with no conflicts; agent/reviewer (e1bc901, notes only) merged after. Frontend lockfile regenerated and committed (name field only).
+
 ## In progress
-- [ ] START A FRESH SESSION ON main FOR MODE B (integration). Inputs:
-  - agent/backend: code c30496a, HANDOFF-3 addendum a4c2ac6. Claims 153 pytest pass, ruff/mypy clean, schemathesis run. TASK-001..006 in REVIEW on its branch.
-  - agent/frontend: HANDOFF-2 at c4825cf. TASK-107 wired Dispatch UI; verified by it against a copy of backend c30496a on port 8001. No new tests/screenshots/console log (ADR-008), no code review of the TASK-107 diff, narrow widths not adapted.
-  - Port 8002 is held by an unrelated app (answers /api/health). Backend worker used 8012. Check with lsof before trusting a port.
-  - Both branches merged main several times; expect docs/tasks status edits and docs/ files to be the likely conflicts. Contract files resolve toward main.
-  - Reviewer (cguhacks2026-reviewer-93) is standing by; will run backend gate first, then a time-boxed frontend walkthrough on 8003/3003. Message it when integration is done.
-  - Demo trucks: C-103 / C-107 (two differing route cards on the normal day; one reroute wins all three after close60 confirmed).
+- [ ] Reviewer gate: TASK-001..006 and TASK-107 in REVIEW. Reviewer (cguhacks2026-reviewer-93) to run backend gate, then a time-boxed frontend walkthrough on 8003/3003.
+- [ ] Demo observation for the owner: after close60 confirmed, C-103's suggested option is "reschedule:135", while the on-time reroute POLA-ONT-1 holds all three role cards but is not suggested (default weights). Not a defect against the contract; may confuse the demo narrative.
+- Notes: port 8002 is held by an unrelated app. Frontend's docs/review/F-*.png screenshots show the FIRST UI, not the Dispatch UI (stale, see DEBT).
 
 ## Verified
 - Supplied folder contains only GeoAI material (no DPM kit/JSON files); whiteboard is headed "GeoAI" -> ls of the folder, photos
@@ -46,6 +44,11 @@ Last updated: 2026-11-14T19:25:00Z
 - task scopes do not overlap across owners (only feeds.py, TASK-001 then TASK-005, same owner) -> same script
 - every acceptance id cited in a task exists in ACCEPTANCE.md (33 ids) -> same script
 - scripts/tasks.sh regenerates INDEX with 11 tasks; working tree clean; 36 commits on main -> command output
+- INTEGRATED main: backend `cd backend && python3 -m pytest -q` -> 153 passed in 2.90s (2026-11-14 13:04)
+- INTEGRATED main: frontend gen:api produces no diff; typecheck exit 0; lint exit 0; vitest 3 files / 29 tests passed; `npm run build` built in 529ms
+- INTEGRATED main: backend started on 8000 (pid confirmed via lsof); scripts/contract-test.sh exit 0, 13 paths, 0 unreachable (reachability only; schemathesis not installed in main's env; schema conformance covered by backend pytest assert_matches)
+- INTEGRATED main: close60 flow via API -> add D-1 unverified affecting C-103, C-107; confirm -> 2 at risk, 228 late min; decide suggested option 201 with supervisor update; undo 200; dismiss -> changed == normal; reset ok
+- Secret scan of origin/main..HEAD diff: no key patterns, no tracked .env
 
 ## Blocked on
 - nothing (presentation deadline unconfirmed; assumed 18:00, freeze 16:00)

@@ -55,3 +55,46 @@ See `docs/status/main.md` section Verified for commands and results.
 
 ### Commit
 See `git log main`.
+
+## HANDOFF-2 — main — 2026-11-14
+
+### Summary
+Integration (Mode B) done in the planning session at the owner's explicit
+request, then `main` pushed to `origin`. All worker work is now on `main`.
+
+### Tasks Completed
+Integration of TASK-001..006 (backend) and TASK-107 (frontend). Statuses stay
+REVIEW; the reviewer gates.
+
+### Files Changed
+Merges of agent/backend (a4c2ac6), agent/frontend (c4825cf), agent/reviewer
+(e1bc901). Manager commits: frontend lockfile regeneration, `.gitignore`
+(`.playwright-mcp/`), task INDEX, status, DEBT, this handoff.
+
+### Contracts
+No contract change during integration. No CONTRACT CHANGE REQUEST was open.
+
+### Skills Used
+| Skill | Stage invoked | What it actually changed |
+|---|---|---|
+| superpowers:verification-before-completion | before handing to the reviewer | re-ran each check fresh; exit codes taken from the commands, not from `tail` |
+
+### Verification
+See `docs/status/main.md` section Verified, lines prefixed INTEGRATED.
+
+### What Was NOT Verified
+- The Dispatch UI was not opened in a browser by the manager. Frontend build,
+  typecheck, lint and unit tests pass; the UI itself was walked only by the
+  frontend worker. The reviewer's walkthrough on 3003 is the independent check.
+- `scripts/audit-skills.sh` was not run on the workers' transcripts.
+- Full schema fuzzing (schemathesis) did not run in main's environment; the
+  contract test checked reachability only.
+- Running from a fresh clone (`scripts/bootstrap.sh` from zero) was not tried.
+
+### Known Issues
+- Demo: after close60 is confirmed, C-103's suggested option is a reschedule,
+  while the on-time reroute holds all three role cards and is not suggested.
+- Stale frontend screenshots in `docs/review/` (DEBT).
+
+### Commit
+See `git log main`; pushed to `origin/main`.
