@@ -1,0 +1,1510 @@
+{
+  "nodes": [
+    {
+      "id": "POLA",
+      "lat": 33.7395,
+      "lng": -118.278,
+      "kind": "port"
+    },
+    {
+      "id": "POLB",
+      "lat": 33.7555,
+      "lng": -118.2185,
+      "kind": "port"
+    },
+    {
+      "id": "VER",
+      "lat": 34.003,
+      "lng": -118.23,
+      "kind": "warehouse"
+    },
+    {
+      "id": "COM",
+      "lat": 34.001,
+      "lng": -118.156,
+      "kind": "warehouse"
+    },
+    {
+      "id": "SFS",
+      "lat": 33.942,
+      "lng": -118.085,
+      "kind": "warehouse"
+    },
+    {
+      "id": "ONT",
+      "lat": 34.03,
+      "lng": -117.59,
+      "kind": "warehouse"
+    },
+    {
+      "id": "FON",
+      "lat": 34.095,
+      "lng": -117.46,
+      "kind": "warehouse"
+    },
+    {
+      "id": "IRV",
+      "lat": 33.692,
+      "lng": -117.84,
+      "kind": "warehouse"
+    },
+    {
+      "id": "J_710N",
+      "lat": 33.91,
+      "lng": -118.204,
+      "kind": "junction"
+    },
+    {
+      "id": "J_710S",
+      "lat": 33.82,
+      "lng": -118.22,
+      "kind": "junction"
+    },
+    {
+      "id": "J_110",
+      "lat": 33.95,
+      "lng": -118.28,
+      "kind": "junction"
+    },
+    {
+      "id": "J_DTLA",
+      "lat": 34.05,
+      "lng": -118.24,
+      "kind": "hub"
+    },
+    {
+      "id": "J_605",
+      "lat": 33.99,
+      "lng": -118.09,
+      "kind": "junction"
+    },
+    {
+      "id": "J_91W",
+      "lat": 33.865,
+      "lng": -118.08,
+      "kind": "junction"
+    },
+    {
+      "id": "J_91C",
+      "lat": 33.87,
+      "lng": -117.925,
+      "kind": "junction"
+    },
+    {
+      "id": "J_91E",
+      "lat": 33.88,
+      "lng": -117.57,
+      "kind": "junction"
+    },
+    {
+      "id": "J_10W",
+      "lat": 34.07,
+      "lng": -118.04,
+      "kind": "junction"
+    },
+    {
+      "id": "J_10C",
+      "lat": 34.07,
+      "lng": -117.75,
+      "kind": "junction"
+    },
+    {
+      "id": "J_10E",
+      "lat": 34.065,
+      "lng": -117.65,
+      "kind": "junction"
+    },
+    {
+      "id": "J_60W",
+      "lat": 34.0,
+      "lng": -117.88,
+      "kind": "junction"
+    },
+    {
+      "id": "J_60E",
+      "lat": 34.02,
+      "lng": -117.7,
+      "kind": "junction"
+    },
+    {
+      "id": "J_405S",
+      "lat": 33.83,
+      "lng": -118.27,
+      "kind": "junction"
+    },
+    {
+      "id": "J_405C",
+      "lat": 33.78,
+      "lng": -118.1,
+      "kind": "junction"
+    },
+    {
+      "id": "J_405E",
+      "lat": 33.72,
+      "lng": -117.95,
+      "kind": "junction"
+    },
+    {
+      "id": "J_CAR",
+      "lat": 33.83,
+      "lng": -118.22,
+      "kind": "junction"
+    },
+    {
+      "id": "J_TOR",
+      "lat": 33.835,
+      "lng": -118.31,
+      "kind": "junction"
+    },
+    {
+      "id": "J_LB",
+      "lat": 33.8,
+      "lng": -118.2,
+      "kind": "junction"
+    },
+    {
+      "id": "J_SP",
+      "lat": 33.74,
+      "lng": -118.25,
+      "kind": "junction"
+    },
+    {
+      "id": "J_WH",
+      "lat": 33.96,
+      "lng": -118.18,
+      "kind": "junction"
+    },
+    {
+      "id": "J_ELM",
+      "lat": 34.07,
+      "lng": -118.04,
+      "kind": "junction"
+    },
+    {
+      "id": "J_POM",
+      "lat": 34.055,
+      "lng": -117.75,
+      "kind": "junction"
+    },
+    {
+      "id": "J_COR",
+      "lat": 33.88,
+      "lng": -117.57,
+      "kind": "junction"
+    },
+    {
+      "id": "J_ANA",
+      "lat": 33.835,
+      "lng": -117.91,
+      "kind": "junction"
+    },
+    {
+      "id": "J_FUL",
+      "lat": 33.87,
+      "lng": -117.925,
+      "kind": "junction"
+    },
+    {
+      "id": "J_NOR",
+      "lat": 33.9,
+      "lng": -118.07,
+      "kind": "junction"
+    },
+    {
+      "id": "J_DOW",
+      "lat": 33.92,
+      "lng": -118.16,
+      "kind": "junction"
+    },
+    {
+      "id": "J_BEL",
+      "lat": 34.0,
+      "lng": -118.0,
+      "kind": "junction"
+    },
+    {
+      "id": "J_IND",
+      "lat": 34.08,
+      "lng": -117.55,
+      "kind": "junction"
+    },
+    {
+      "id": "J_RIA",
+      "lat": 34.0,
+      "lng": -117.35,
+      "kind": "junction"
+    },
+    {
+      "id": "J_SAN",
+      "lat": 33.75,
+      "lng": -117.87,
+      "kind": "junction"
+    },
+    {
+      "id": "J_COS",
+      "lat": 33.7,
+      "lng": -118.0,
+      "kind": "junction"
+    },
+    {
+      "id": "J_HAR",
+      "lat": 33.78,
+      "lng": -118.15,
+      "kind": "junction"
+    },
+    {
+      "id": "J_SIG",
+      "lat": 33.9,
+      "lng": -118.25,
+      "kind": "junction"
+    },
+    {
+      "id": "J_ALU",
+      "lat": 33.98,
+      "lng": -118.12,
+      "kind": "junction"
+    },
+    {
+      "id": "J_MON",
+      "lat": 34.06,
+      "lng": -118.12,
+      "kind": "junction"
+    },
+    {
+      "id": "J_PAS",
+      "lat": 34.14,
+      "lng": -118.15,
+      "kind": "junction"
+    },
+    {
+      "id": "J_GLN",
+      "lat": 34.12,
+      "lng": -118.25,
+      "kind": "junction"
+    },
+    {
+      "id": "J_BUR",
+      "lat": 34.18,
+      "lng": -118.3,
+      "kind": "junction"
+    }
+  ],
+  "edges": [
+    {
+      "id": "E1",
+      "u": "POLA",
+      "v": "J_SP",
+      "length_m": 2978.1,
+      "travel_s": 121.1,
+      "hwy": true
+    },
+    {
+      "id": "E2",
+      "u": "J_SP",
+      "v": "POLA",
+      "length_m": 2978.1,
+      "travel_s": 121.1,
+      "hwy": true
+    },
+    {
+      "id": "E3",
+      "u": "POLA",
+      "v": "J_TOR",
+      "length_m": 12676.7,
+      "travel_s": 515.6,
+      "hwy": true
+    },
+    {
+      "id": "E4",
+      "u": "J_TOR",
+      "v": "POLA",
+      "length_m": 12676.7,
+      "travel_s": 515.6,
+      "hwy": true
+    },
+    {
+      "id": "E5",
+      "u": "POLA",
+      "v": "J_405S",
+      "length_m": 11603.8,
+      "travel_s": 471.9,
+      "hwy": true
+    },
+    {
+      "id": "E6",
+      "u": "J_405S",
+      "v": "POLA",
+      "length_m": 11603.8,
+      "travel_s": 471.9,
+      "hwy": true
+    },
+    {
+      "id": "E7",
+      "u": "POLB",
+      "v": "J_LB",
+      "length_m": 6020.6,
+      "travel_s": 244.9,
+      "hwy": true
+    },
+    {
+      "id": "E8",
+      "u": "J_LB",
+      "v": "POLB",
+      "length_m": 6020.6,
+      "travel_s": 244.9,
+      "hwy": true
+    },
+    {
+      "id": "E9",
+      "u": "POLB",
+      "v": "J_710S",
+      "length_m": 8249.4,
+      "travel_s": 335.5,
+      "hwy": true
+    },
+    {
+      "id": "E10",
+      "u": "J_710S",
+      "v": "POLB",
+      "length_m": 8249.4,
+      "travel_s": 335.5,
+      "hwy": true
+    },
+    {
+      "id": "E11",
+      "u": "POLB",
+      "v": "J_CAR",
+      "length_m": 9528.0,
+      "travel_s": 387.5,
+      "hwy": true
+    },
+    {
+      "id": "E12",
+      "u": "J_CAR",
+      "v": "POLB",
+      "length_m": 9528.0,
+      "travel_s": 387.5,
+      "hwy": true
+    },
+    {
+      "id": "E13",
+      "u": "J_SP",
+      "v": "J_CAR",
+      "length_m": 11942.2,
+      "travel_s": 485.7,
+      "hwy": true
+    },
+    {
+      "id": "E14",
+      "u": "J_CAR",
+      "v": "J_SP",
+      "length_m": 11942.2,
+      "travel_s": 485.7,
+      "hwy": true
+    },
+    {
+      "id": "E15",
+      "u": "J_CAR",
+      "v": "J_710S",
+      "length_m": 1278.7,
+      "travel_s": 52.0,
+      "hwy": true
+    },
+    {
+      "id": "E16",
+      "u": "J_710S",
+      "v": "J_CAR",
+      "length_m": 1278.7,
+      "travel_s": 52.0,
+      "hwy": true
+    },
+    {
+      "id": "E17",
+      "u": "J_710S",
+      "v": "J_710N",
+      "length_m": 11633.4,
+      "travel_s": 473.1,
+      "hwy": true
+    },
+    {
+      "id": "E18",
+      "u": "J_710N",
+      "v": "J_710S",
+      "length_m": 11633.4,
+      "travel_s": 473.1,
+      "hwy": true
+    },
+    {
+      "id": "E19",
+      "u": "J_710N",
+      "v": "J_DOW",
+      "length_m": 4841.1,
+      "travel_s": 196.9,
+      "hwy": true
+    },
+    {
+      "id": "E20",
+      "u": "J_DOW",
+      "v": "J_710N",
+      "length_m": 4841.1,
+      "travel_s": 196.9,
+      "hwy": true
+    },
+    {
+      "id": "E21",
+      "u": "J_DOW",
+      "v": "VER",
+      "length_m": 12952.5,
+      "travel_s": 1034.8,
+      "hwy": false
+    },
+    {
+      "id": "E22",
+      "u": "VER",
+      "v": "J_DOW",
+      "length_m": 12952.5,
+      "travel_s": 1034.8,
+      "hwy": false
+    },
+    {
+      "id": "E23",
+      "u": "J_710N",
+      "v": "COM",
+      "length_m": 12701.6,
+      "travel_s": 516.6,
+      "hwy": true
+    },
+    {
+      "id": "E24",
+      "u": "COM",
+      "v": "J_710N",
+      "length_m": 12701.6,
+      "travel_s": 516.6,
+      "hwy": true
+    },
+    {
+      "id": "E25",
+      "u": "J_110",
+      "v": "J_SIG",
+      "length_m": 7142.3,
+      "travel_s": 290.5,
+      "hwy": true
+    },
+    {
+      "id": "E26",
+      "u": "J_SIG",
+      "v": "J_110",
+      "length_m": 7142.3,
+      "travel_s": 290.5,
+      "hwy": true
+    },
+    {
+      "id": "E27",
+      "u": "J_SIG",
+      "v": "J_DTLA",
+      "length_m": 19210.4,
+      "travel_s": 781.3,
+      "hwy": true
+    },
+    {
+      "id": "E28",
+      "u": "J_DTLA",
+      "v": "J_SIG",
+      "length_m": 19210.4,
+      "travel_s": 781.3,
+      "hwy": true
+    },
+    {
+      "id": "E29",
+      "u": "J_DTLA",
+      "v": "VER",
+      "length_m": 6102.8,
+      "travel_s": 487.6,
+      "hwy": false
+    },
+    {
+      "id": "E30",
+      "u": "VER",
+      "v": "J_DTLA",
+      "length_m": 6102.8,
+      "travel_s": 487.6,
+      "hwy": false
+    },
+    {
+      "id": "E31",
+      "u": "J_TOR",
+      "v": "J_110",
+      "length_m": 15046.4,
+      "travel_s": 612.0,
+      "hwy": true
+    },
+    {
+      "id": "E32",
+      "u": "J_110",
+      "v": "J_TOR",
+      "length_m": 15046.4,
+      "travel_s": 612.0,
+      "hwy": true
+    },
+    {
+      "id": "E33",
+      "u": "J_405S",
+      "v": "J_HAR",
+      "length_m": 14263.9,
+      "travel_s": 580.1,
+      "hwy": true
+    },
+    {
+      "id": "E34",
+      "u": "J_HAR",
+      "v": "J_405S",
+      "length_m": 14263.9,
+      "travel_s": 580.1,
+      "hwy": true
+    },
+    {
+      "id": "E35",
+      "u": "J_HAR",
+      "v": "J_405C",
+      "length_m": 5314.3,
+      "travel_s": 216.1,
+      "hwy": true
+    },
+    {
+      "id": "E36",
+      "u": "J_405C",
+      "v": "J_HAR",
+      "length_m": 5314.3,
+      "travel_s": 216.1,
+      "hwy": true
+    },
+    {
+      "id": "E37",
+      "u": "J_405C",
+      "v": "J_COS",
+      "length_m": 14755.5,
+      "travel_s": 600.1,
+      "hwy": true
+    },
+    {
+      "id": "E38",
+      "u": "J_COS",
+      "v": "J_405C",
+      "length_m": 14755.5,
+      "travel_s": 600.1,
+      "hwy": true
+    },
+    {
+      "id": "E39",
+      "u": "J_COS",
+      "v": "J_405E",
+      "length_m": 5901.6,
+      "travel_s": 240.0,
+      "hwy": true
+    },
+    {
+      "id": "E40",
+      "u": "J_405E",
+      "v": "J_COS",
+      "length_m": 5901.6,
+      "travel_s": 240.0,
+      "hwy": true
+    },
+    {
+      "id": "E41",
+      "u": "J_405E",
+      "v": "J_SAN",
+      "length_m": 9332.3,
+      "travel_s": 379.6,
+      "hwy": true
+    },
+    {
+      "id": "E42",
+      "u": "J_SAN",
+      "v": "J_405E",
+      "length_m": 9332.3,
+      "travel_s": 379.6,
+      "hwy": true
+    },
+    {
+      "id": "E43",
+      "u": "J_SAN",
+      "v": "IRV",
+      "length_m": 8073.9,
+      "travel_s": 645.0,
+      "hwy": false
+    },
+    {
+      "id": "E44",
+      "u": "IRV",
+      "v": "J_SAN",
+      "length_m": 8073.9,
+      "travel_s": 645.0,
+      "hwy": false
+    },
+    {
+      "id": "E45",
+      "u": "J_LB",
+      "v": "J_HAR",
+      "length_m": 5897.1,
+      "travel_s": 239.8,
+      "hwy": true
+    },
+    {
+      "id": "E46",
+      "u": "J_HAR",
+      "v": "J_LB",
+      "length_m": 5897.1,
+      "travel_s": 239.8,
+      "hwy": true
+    },
+    {
+      "id": "E47",
+      "u": "COM",
+      "v": "J_ALU",
+      "length_m": 4666.9,
+      "travel_s": 372.8,
+      "hwy": false
+    },
+    {
+      "id": "E48",
+      "u": "J_ALU",
+      "v": "COM",
+      "length_m": 4666.9,
+      "travel_s": 372.8,
+      "hwy": false
+    },
+    {
+      "id": "E49",
+      "u": "J_ALU",
+      "v": "J_605",
+      "length_m": 3428.3,
+      "travel_s": 139.4,
+      "hwy": true
+    },
+    {
+      "id": "E50",
+      "u": "J_605",
+      "v": "J_ALU",
+      "length_m": 3428.3,
+      "travel_s": 139.4,
+      "hwy": true
+    },
+    {
+      "id": "E51",
+      "u": "J_605",
+      "v": "SFS",
+      "length_m": 6160.8,
+      "travel_s": 492.2,
+      "hwy": false
+    },
+    {
+      "id": "E52",
+      "u": "SFS",
+      "v": "J_605",
+      "length_m": 6160.8,
+      "travel_s": 492.2,
+      "hwy": false
+    },
+    {
+      "id": "E53",
+      "u": "J_605",
+      "v": "J_91W",
+      "length_m": 16019.4,
+      "travel_s": 651.5,
+      "hwy": true
+    },
+    {
+      "id": "E54",
+      "u": "J_91W",
+      "v": "J_605",
+      "length_m": 16019.4,
+      "travel_s": 651.5,
+      "hwy": true
+    },
+    {
+      "id": "E55",
+      "u": "J_91W",
+      "v": "J_91C",
+      "length_m": 16469.9,
+      "travel_s": 669.9,
+      "hwy": true
+    },
+    {
+      "id": "E56",
+      "u": "J_91C",
+      "v": "J_91W",
+      "length_m": 16469.9,
+      "travel_s": 669.9,
+      "hwy": true
+    },
+    {
+      "id": "E57",
+      "u": "J_91C",
+      "v": "J_ANA",
+      "length_m": 4750.6,
+      "travel_s": 193.2,
+      "hwy": true
+    },
+    {
+      "id": "E58",
+      "u": "J_ANA",
+      "v": "J_91C",
+      "length_m": 4750.6,
+      "travel_s": 193.2,
+      "hwy": true
+    },
+    {
+      "id": "E59",
+      "u": "J_ANA",
+      "v": "J_91E",
+      "length_m": 36560.3,
+      "travel_s": 1487.0,
+      "hwy": true
+    },
+    {
+      "id": "E60",
+      "u": "J_91E",
+      "v": "J_ANA",
+      "length_m": 36560.3,
+      "travel_s": 1487.0,
+      "hwy": true
+    },
+    {
+      "id": "E61",
+      "u": "J_91E",
+      "v": "J_COR",
+      "length_m": 0.0,
+      "travel_s": 0.0,
+      "hwy": true
+    },
+    {
+      "id": "E62",
+      "u": "J_COR",
+      "v": "J_91E",
+      "length_m": 0.0,
+      "travel_s": 0.0,
+      "hwy": true
+    },
+    {
+      "id": "E63",
+      "u": "SFS",
+      "v": "J_91W",
+      "length_m": 9860.6,
+      "travel_s": 787.8,
+      "hwy": false
+    },
+    {
+      "id": "E64",
+      "u": "J_91W",
+      "v": "SFS",
+      "length_m": 9860.6,
+      "travel_s": 787.8,
+      "hwy": false
+    },
+    {
+      "id": "E65",
+      "u": "J_DOW",
+      "v": "J_WH",
+      "length_m": 5537.6,
+      "travel_s": 442.4,
+      "hwy": false
+    },
+    {
+      "id": "E66",
+      "u": "J_WH",
+      "v": "J_DOW",
+      "length_m": 5537.6,
+      "travel_s": 442.4,
+      "hwy": false
+    },
+    {
+      "id": "E67",
+      "u": "J_WH",
+      "v": "COM",
+      "length_m": 5827.8,
+      "travel_s": 465.6,
+      "hwy": false
+    },
+    {
+      "id": "E68",
+      "u": "COM",
+      "v": "J_WH",
+      "length_m": 5827.8,
+      "travel_s": 465.6,
+      "hwy": false
+    },
+    {
+      "id": "E69",
+      "u": "J_DTLA",
+      "v": "J_MON",
+      "length_m": 12777.4,
+      "travel_s": 519.7,
+      "hwy": true
+    },
+    {
+      "id": "E70",
+      "u": "J_MON",
+      "v": "J_DTLA",
+      "length_m": 12777.4,
+      "travel_s": 519.7,
+      "hwy": true
+    },
+    {
+      "id": "E71",
+      "u": "J_MON",
+      "v": "J_10W",
+      "length_m": 8570.4,
+      "travel_s": 348.6,
+      "hwy": true
+    },
+    {
+      "id": "E72",
+      "u": "J_10W",
+      "v": "J_MON",
+      "length_m": 8570.4,
+      "travel_s": 348.6,
+      "hwy": true
+    },
+    {
+      "id": "E73",
+      "u": "J_10W",
+      "v": "J_BEL",
+      "length_m": 9904.1,
+      "travel_s": 402.8,
+      "hwy": true
+    },
+    {
+      "id": "E74",
+      "u": "J_BEL",
+      "v": "J_10W",
+      "length_m": 9904.1,
+      "travel_s": 402.8,
+      "hwy": true
+    },
+    {
+      "id": "E75",
+      "u": "J_BEL",
+      "v": "J_60W",
+      "length_m": 12721.5,
+      "travel_s": 517.4,
+      "hwy": true
+    },
+    {
+      "id": "E76",
+      "u": "J_60W",
+      "v": "J_BEL",
+      "length_m": 12721.5,
+      "travel_s": 517.4,
+      "hwy": true
+    },
+    {
+      "id": "E77",
+      "u": "J_60W",
+      "v": "J_60E",
+      "length_m": 19250.6,
+      "travel_s": 783.0,
+      "hwy": true
+    },
+    {
+      "id": "E78",
+      "u": "J_60E",
+      "v": "J_60W",
+      "length_m": 19250.6,
+      "travel_s": 783.0,
+      "hwy": true
+    },
+    {
+      "id": "E79",
+      "u": "J_60E",
+      "v": "J_10C",
+      "length_m": 8303.4,
+      "travel_s": 337.7,
+      "hwy": true
+    },
+    {
+      "id": "E80",
+      "u": "J_10C",
+      "v": "J_60E",
+      "length_m": 8303.4,
+      "travel_s": 337.7,
+      "hwy": true
+    },
+    {
+      "id": "E81",
+      "u": "J_10W",
+      "v": "J_10C",
+      "length_m": 30718.3,
+      "travel_s": 1249.4,
+      "hwy": true
+    },
+    {
+      "id": "E82",
+      "u": "J_10C",
+      "v": "J_10W",
+      "length_m": 30718.3,
+      "travel_s": 1249.4,
+      "hwy": true
+    },
+    {
+      "id": "E83",
+      "u": "J_10C",
+      "v": "J_10E",
+      "length_m": 10612.1,
+      "travel_s": 431.6,
+      "hwy": true
+    },
+    {
+      "id": "E84",
+      "u": "J_10E",
+      "v": "J_10C",
+      "length_m": 10612.1,
+      "travel_s": 431.6,
+      "hwy": true
+    },
+    {
+      "id": "E85",
+      "u": "J_10E",
+      "v": "ONT",
+      "length_m": 7774.6,
+      "travel_s": 621.1,
+      "hwy": false
+    },
+    {
+      "id": "E86",
+      "u": "ONT",
+      "v": "J_10E",
+      "length_m": 7774.6,
+      "travel_s": 621.1,
+      "hwy": false
+    },
+    {
+      "id": "E87",
+      "u": "J_10E",
+      "v": "J_IND",
+      "length_m": 10764.5,
+      "travel_s": 437.8,
+      "hwy": true
+    },
+    {
+      "id": "E88",
+      "u": "J_IND",
+      "v": "J_10E",
+      "length_m": 10764.5,
+      "travel_s": 437.8,
+      "hwy": true
+    },
+    {
+      "id": "E89",
+      "u": "J_IND",
+      "v": "FON",
+      "length_m": 9722.4,
+      "travel_s": 776.7,
+      "hwy": false
+    },
+    {
+      "id": "E90",
+      "u": "FON",
+      "v": "J_IND",
+      "length_m": 9722.4,
+      "travel_s": 776.7,
+      "hwy": false
+    },
+    {
+      "id": "E91",
+      "u": "ONT",
+      "v": "J_IND",
+      "length_m": 7670.6,
+      "travel_s": 612.8,
+      "hwy": false
+    },
+    {
+      "id": "E92",
+      "u": "J_IND",
+      "v": "ONT",
+      "length_m": 7670.6,
+      "travel_s": 612.8,
+      "hwy": false
+    },
+    {
+      "id": "E93",
+      "u": "FON",
+      "v": "J_RIA",
+      "length_m": 16834.8,
+      "travel_s": 684.7,
+      "hwy": true
+    },
+    {
+      "id": "E94",
+      "u": "J_RIA",
+      "v": "FON",
+      "length_m": 16834.8,
+      "travel_s": 684.7,
+      "hwy": true
+    },
+    {
+      "id": "E95",
+      "u": "J_60W",
+      "v": "ONT",
+      "length_m": 30976.6,
+      "travel_s": 1259.9,
+      "hwy": true
+    },
+    {
+      "id": "E96",
+      "u": "ONT",
+      "v": "J_60W",
+      "length_m": 30976.6,
+      "travel_s": 1259.9,
+      "hwy": true
+    },
+    {
+      "id": "E97",
+      "u": "J_POM",
+      "v": "J_10C",
+      "length_m": 1918.1,
+      "travel_s": 78.0,
+      "hwy": true
+    },
+    {
+      "id": "E98",
+      "u": "J_10C",
+      "v": "J_POM",
+      "length_m": 1918.1,
+      "travel_s": 78.0,
+      "hwy": true
+    },
+    {
+      "id": "E99",
+      "u": "J_FUL",
+      "v": "J_91C",
+      "length_m": 0.0,
+      "travel_s": 0.0,
+      "hwy": true
+    },
+    {
+      "id": "E100",
+      "u": "J_91C",
+      "v": "J_FUL",
+      "length_m": 0.0,
+      "travel_s": 0.0,
+      "hwy": true
+    },
+    {
+      "id": "E101",
+      "u": "J_ANA",
+      "v": "IRV",
+      "length_m": 19742.2,
+      "travel_s": 802.9,
+      "hwy": true
+    },
+    {
+      "id": "E102",
+      "u": "IRV",
+      "v": "J_ANA",
+      "length_m": 19742.2,
+      "travel_s": 802.9,
+      "hwy": true
+    },
+    {
+      "id": "E103",
+      "u": "J_NOR",
+      "v": "J_91W",
+      "length_m": 4599.8,
+      "travel_s": 187.1,
+      "hwy": true
+    },
+    {
+      "id": "E104",
+      "u": "J_91W",
+      "v": "J_NOR",
+      "length_m": 4599.8,
+      "travel_s": 187.1,
+      "hwy": true
+    },
+    {
+      "id": "E105",
+      "u": "J_NOR",
+      "v": "J_605",
+      "length_m": 11702.6,
+      "travel_s": 476.0,
+      "hwy": true
+    },
+    {
+      "id": "E106",
+      "u": "J_605",
+      "v": "J_NOR",
+      "length_m": 11702.6,
+      "travel_s": 476.0,
+      "hwy": true
+    },
+    {
+      "id": "E107",
+      "u": "J_NOR",
+      "v": "SFS",
+      "length_m": 5601.6,
+      "travel_s": 447.5,
+      "hwy": false
+    },
+    {
+      "id": "E108",
+      "u": "SFS",
+      "v": "J_NOR",
+      "length_m": 5601.6,
+      "travel_s": 447.5,
+      "hwy": false
+    },
+    {
+      "id": "E109",
+      "u": "J_ELM",
+      "v": "J_10W",
+      "length_m": 0.0,
+      "travel_s": 0.0,
+      "hwy": true
+    },
+    {
+      "id": "E110",
+      "u": "J_10W",
+      "v": "J_ELM",
+      "length_m": 0.0,
+      "travel_s": 0.0,
+      "hwy": true
+    },
+    {
+      "id": "E111",
+      "u": "J_PAS",
+      "v": "J_MON",
+      "length_m": 10711.8,
+      "travel_s": 435.7,
+      "hwy": true
+    },
+    {
+      "id": "E112",
+      "u": "J_MON",
+      "v": "J_PAS",
+      "length_m": 10711.8,
+      "travel_s": 435.7,
+      "hwy": true
+    },
+    {
+      "id": "E113",
+      "u": "J_GLN",
+      "v": "J_DTLA",
+      "length_m": 9013.6,
+      "travel_s": 366.6,
+      "hwy": true
+    },
+    {
+      "id": "E114",
+      "u": "J_DTLA",
+      "v": "J_GLN",
+      "length_m": 9013.6,
+      "travel_s": 366.6,
+      "hwy": true
+    },
+    {
+      "id": "E115",
+      "u": "J_BUR",
+      "v": "J_GLN",
+      "length_m": 9320.1,
+      "travel_s": 379.1,
+      "hwy": true
+    },
+    {
+      "id": "E116",
+      "u": "J_GLN",
+      "v": "J_BUR",
+      "length_m": 9320.1,
+      "travel_s": 379.1,
+      "hwy": true
+    },
+    {
+      "id": "E117",
+      "u": "J_CAR",
+      "v": "J_405S",
+      "length_m": 5311.2,
+      "travel_s": 216.0,
+      "hwy": true
+    },
+    {
+      "id": "E118",
+      "u": "J_405S",
+      "v": "J_CAR",
+      "length_m": 5311.2,
+      "travel_s": 216.0,
+      "hwy": true
+    },
+    {
+      "id": "E119",
+      "u": "POLB",
+      "v": "J_SP",
+      "length_m": 3891.8,
+      "travel_s": 158.3,
+      "hwy": true
+    },
+    {
+      "id": "E120",
+      "u": "J_SP",
+      "v": "POLB",
+      "length_m": 3891.8,
+      "travel_s": 158.3,
+      "hwy": true
+    },
+    {
+      "id": "E121",
+      "u": "J_ALU",
+      "v": "J_BEL",
+      "length_m": 12977.5,
+      "travel_s": 1036.8,
+      "hwy": false
+    },
+    {
+      "id": "E122",
+      "u": "J_BEL",
+      "v": "J_ALU",
+      "length_m": 12977.5,
+      "travel_s": 1036.8,
+      "hwy": false
+    },
+    {
+      "id": "E123",
+      "u": "COM",
+      "v": "J_605",
+      "length_m": 7137.2,
+      "travel_s": 290.3,
+      "hwy": true
+    },
+    {
+      "id": "E124",
+      "u": "J_605",
+      "v": "COM",
+      "length_m": 7137.2,
+      "travel_s": 290.3,
+      "hwy": true
+    },
+    {
+      "id": "E125",
+      "u": "J_710N",
+      "v": "J_ALU",
+      "length_m": 12630.4,
+      "travel_s": 1009.0,
+      "hwy": false
+    },
+    {
+      "id": "E126",
+      "u": "J_ALU",
+      "v": "J_710N",
+      "length_m": 12630.4,
+      "travel_s": 1009.0,
+      "hwy": false
+    },
+    {
+      "id": "E127",
+      "u": "J_91E",
+      "v": "ONT",
+      "length_m": 19298.1,
+      "travel_s": 784.9,
+      "hwy": true
+    },
+    {
+      "id": "E128",
+      "u": "ONT",
+      "v": "J_91E",
+      "length_m": 19298.1,
+      "travel_s": 784.9,
+      "hwy": true
+    },
+    {
+      "id": "E129",
+      "u": "J_COR",
+      "v": "ONT",
+      "length_m": 19298.1,
+      "travel_s": 784.9,
+      "hwy": true
+    },
+    {
+      "id": "E130",
+      "u": "ONT",
+      "v": "J_COR",
+      "length_m": 19298.1,
+      "travel_s": 784.9,
+      "hwy": true
+    },
+    {
+      "id": "E131",
+      "u": "J_405E",
+      "v": "J_ANA",
+      "length_m": 15307.8,
+      "travel_s": 622.6,
+      "hwy": true
+    },
+    {
+      "id": "E132",
+      "u": "J_ANA",
+      "v": "J_405E",
+      "length_m": 15307.8,
+      "travel_s": 622.6,
+      "hwy": true
+    },
+    {
+      "id": "E133",
+      "u": "J_SAN",
+      "v": "J_ANA",
+      "length_m": 11671.0,
+      "travel_s": 474.7,
+      "hwy": true
+    },
+    {
+      "id": "E134",
+      "u": "J_ANA",
+      "v": "J_SAN",
+      "length_m": 11671.0,
+      "travel_s": 474.7,
+      "hwy": true
+    },
+    {
+      "id": "E135",
+      "u": "J_WH",
+      "v": "J_ALU",
+      "length_m": 6857.7,
+      "travel_s": 547.9,
+      "hwy": false
+    },
+    {
+      "id": "E136",
+      "u": "J_ALU",
+      "v": "J_WH",
+      "length_m": 6857.7,
+      "travel_s": 547.9,
+      "hwy": false
+    },
+    {
+      "id": "E137",
+      "u": "VER",
+      "v": "J_WH",
+      "length_m": 7638.3,
+      "travel_s": 610.2,
+      "hwy": false
+    },
+    {
+      "id": "E138",
+      "u": "J_WH",
+      "v": "VER",
+      "length_m": 7638.3,
+      "travel_s": 610.2,
+      "hwy": false
+    },
+    {
+      "id": "E139",
+      "u": "J_LB",
+      "v": "J_710S",
+      "length_m": 3325.1,
+      "travel_s": 135.2,
+      "hwy": true
+    },
+    {
+      "id": "E140",
+      "u": "J_710S",
+      "v": "J_LB",
+      "length_m": 3325.1,
+      "travel_s": 135.2,
+      "hwy": true
+    },
+    {
+      "id": "E141",
+      "u": "J_COS",
+      "v": "IRV",
+      "length_m": 17053.2,
+      "travel_s": 693.6,
+      "hwy": true
+    },
+    {
+      "id": "E142",
+      "u": "IRV",
+      "v": "J_COS",
+      "length_m": 17053.2,
+      "travel_s": 693.6,
+      "hwy": true
+    },
+    {
+      "id": "E143",
+      "u": "J_60E",
+      "v": "FON",
+      "length_m": 27174.4,
+      "travel_s": 1105.2,
+      "hwy": true
+    },
+    {
+      "id": "E144",
+      "u": "FON",
+      "v": "J_60E",
+      "length_m": 27174.4,
+      "travel_s": 1105.2,
+      "hwy": true
+    },
+    {
+      "id": "E145",
+      "u": "J_IND",
+      "v": "J_RIA",
+      "length_m": 23532.4,
+      "travel_s": 957.1,
+      "hwy": true
+    },
+    {
+      "id": "E146",
+      "u": "J_RIA",
+      "v": "J_IND",
+      "length_m": 23532.4,
+      "travel_s": 957.1,
+      "hwy": true
+    },
+    {
+      "id": "E147",
+      "u": "J_POM",
+      "v": "ONT",
+      "length_m": 17252.3,
+      "travel_s": 1378.3,
+      "hwy": false
+    },
+    {
+      "id": "E148",
+      "u": "ONT",
+      "v": "J_POM",
+      "length_m": 17252.3,
+      "travel_s": 1378.3,
+      "hwy": false
+    },
+    {
+      "id": "E149",
+      "u": "J_10E",
+      "v": "J_POM",
+      "length_m": 10670.7,
+      "travel_s": 852.5,
+      "hwy": false
+    },
+    {
+      "id": "E150",
+      "u": "J_POM",
+      "v": "J_10E",
+      "length_m": 10670.7,
+      "travel_s": 852.5,
+      "hwy": false
+    },
+    {
+      "id": "E151",
+      "u": "J_605",
+      "v": "J_BEL",
+      "length_m": 9627.0,
+      "travel_s": 391.5,
+      "hwy": true
+    },
+    {
+      "id": "E152",
+      "u": "J_BEL",
+      "v": "J_605",
+      "length_m": 9627.0,
+      "travel_s": 391.5,
+      "hwy": true
+    }
+  ]
+}
