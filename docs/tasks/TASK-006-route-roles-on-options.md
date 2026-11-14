@@ -27,7 +27,7 @@ updated contract.
 
 ## Acceptance Criteria
 
-- [ ] Among the feasible `keep` and `reroute` options of a shipment: `efficiency` goes to the lowest `eta_min`; `sustainability` to the lowest `co2_kg`; `community` to the highest `community_score` among options whose `eta_min` is within 30 minutes of the lowest. Ties go to the option that appears first.
+- [ ] Among the feasible `keep` and `reroute` options of a shipment: `efficiency` goes to the lowest `eta_min`; `sustainability` to the lowest `co2_kg` and `community` to the highest `community_score`, each among options whose `eta_min` is within 30 minutes of the lowest (sustainability window added 2026-11-14 after backend found the lowest-CO2 route crossing a confirmed closure). Ties go to the option that appears first.
 - [ ] Each of the three roles is held by exactly one option whenever at least one feasible keep or reroute option exists; one option may hold two or three roles.
 - [ ] `spare_truck`, `swap_truck`, `reschedule` and every infeasible option have `roles: []`. When no keep or reroute option is feasible, every option has `roles: []`.
 - [ ] Roles are computed from unrounded engine values and are identical on repeated calls.
