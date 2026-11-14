@@ -5,7 +5,7 @@ the option that appears first in the response order.
 """
 from __future__ import annotations
 
-COMMUNITY_WINDOW_MIN = 30.0
+ROLE_WINDOW_MIN = 30.0
 ROLE_KINDS = ("keep", "reroute")
 
 
@@ -18,9 +18,11 @@ def assign_roles(ordered: list[dict]) -> None:
         return
     # min()/max() return the first of equal items, which gives "ties go to the earlier option"
     eff = min(pool, key=lambda o: o["ev"].eta_min)
-    sus = min(pool, key=lambda o: o["ev"].co2_kg)
     earliest = eff["ev"].eta_min
-    near = [o for o in pool if o["ev"].eta_min - earliest <= COMMUNITY_WINDOW_MIN]
+    # sustainability and community only among options arriving within 30 min of the earliest, so a
+    # route that crosses a closure and arrives hours late is never shown as the green or neighborly one
+    near = [o for o in pool if o["ev"].eta_min - earliest <= ROLE_WINDOW_MIN]
+    sus = min(near, key=lambda o: o["ev"].co2_kg)
     com = max(near, key=lambda o: o["ev"].community.score)
     eff["roles"].append("efficiency")
     sus["roles"].append("sustainability")

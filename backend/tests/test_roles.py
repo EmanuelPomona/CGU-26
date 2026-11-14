@@ -95,3 +95,22 @@ def test_truck_out_keep_has_no_roles(client):
     o = options(client, "C-103")
     assert o["options"][0]["id"] == "keep" and o["options"][0]["roles"] == []
     _check_roles(o)
+
+
+def test_sustainability_candidate_beyond_30_minutes_is_excluded():
+    r = roles_of([opt("keep", "keep", eta=750, co2=90, comm=80),        # cleanest, but 2.5 h late
+                  opt("reroute:a", eta=600, co2=120, comm=85),
+                  opt("reroute:b", eta=630, co2=110, comm=70)])      # exactly 30 min: eligible
+    assert r == {"keep": [], "reroute:a": ["efficiency", "community"], "reroute:b": ["sustainability"]}
+
+
+def test_close60_never_gives_sustainability_to_route_through_closure(client):
+    add_preset(client, "close60", "confirmed")
+    for sid in ("C-103", "C-107"):
+        o = options(client, sid)
+        pool = [x for x in o["options"] if x["feasible"] and x["kind"] in ("keep", "reroute")]
+        earliest = min(x["evaluation"]["eta_min"] for x in pool)
+        sus = next(x for x in o["options"] if "sustainability" in x["roles"])
+        assert "D-1" not in sus["evaluation"]["hit_disruption_ids"], (sid, sus["id"])
+        assert sus["evaluation"]["eta_min"] - earliest <= 30, (sid, sus["id"])
+        assert sus["evaluation"]["status"] != "at_risk", (sid, sus["id"])
