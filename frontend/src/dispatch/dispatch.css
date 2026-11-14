@@ -191,7 +191,7 @@ textarea.draft{width:100%;min-height:9rem;margin-top:.6rem;font:400 .9rem/1.4 va
 .alert form,.alert label{display:block}
 
 /* drag-drop obstacle palette */
-.obstacle-palette{position:absolute;z-index:900;left:1rem;top:1rem;max-width:min(22rem,70vw);pointer-events:auto}
+.obstacle-palette{position:absolute;z-index:900;left:3.5rem;top:1rem;max-width:min(22rem,70vw);pointer-events:auto}
 .dapp.work .obstacle-palette{left:.5rem;top:.5rem;max-width:100%}
 .obstacle-palette-label{font:500 .72rem var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--mute);margin-bottom:.35rem}
 .obstacle-palette-chips{display:flex;flex-wrap:wrap;gap:.35rem}

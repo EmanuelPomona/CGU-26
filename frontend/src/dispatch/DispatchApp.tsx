@@ -8,7 +8,7 @@ import type { Board, Decision, Disruption, Network, OptionsResponse, Preset, Res
 import { useBoard } from '../api/useBoard';
 import { DispatchMap, type Verdict, type View } from './DispatchMap';
 import { ObstaclePalette } from './ObstaclePalette';
-import type { ObstacleType } from './obstacleCatalog';
+import { toDisruptionCreate, type ObstacleType } from './obstacleCatalog';
 import { BAD, GOOD, INK, OBJ, ONROUTE, PROB, ROLE, ROLE_ORDER, fatLbl, type RoleKey, type Tag } from './data';
 import './dispatch.css';
 
@@ -237,6 +237,10 @@ export default function DispatchApp() {
     if (v === 'delete') return run(() => deleteDisruption(id), 'Report removed');
     return run(() => updateDisruption(id, { verification: v }), v === 'dismissed' ? 'Marked open: figures back to normal' : v === 'confirmed' ? 'Confirmed' : 'Back to unverified');
   };
+  const placeObstacle = async (type: ObstacleType, lat: number, lng: number) => {
+    setPlaceType(null);
+    await run(() => createDisruption(toDisruptionCreate(type, lat, lng)), 'Obstacle placed');
+  };
 
   const decide = async (o: ResponseOption, why?: string) => {
     if (!selectedId) return;
@@ -434,12 +438,16 @@ export default function DispatchApp() {
           focusRole={focusRole}
           options={opts}
           probId={probId}
+          placeType={placeType}
           onSelect={select}
           onPickProb={(id) => {
             setProbId(id);
             setView('prob');
           }}
           onVerdict={verdict}
+          onPlaceCancel={() => setPlaceType(null)}
+          onObstaclePlaced={placeObstacle}
+          onObstacleRejected={(reason) => toast(reason)}
         />
         <button id="expand" onClick={() => setView('map')}>Expand map</button>
         {view !== 'net' && (

@@ -3,6 +3,9 @@
 import L from 'leaflet';
 import { useEffect, useRef } from 'react';
 import type { Board, Disruption, Network, OptionsResponse, ShipmentRow } from '../api/types';
+import { OBSTACLE_MIME } from './ObstaclePalette';
+import type { ObstacleType } from './obstacleCatalog';
+import { snapToNearestRoute } from './routeSnap';
 import { BAD, BLUEPRINT, GOOD, INK, ONROUTE, PROB, R, ROLE, ROLE_ORDER, fatLbl, type RoleKey, type RouteTruck } from './data';
 
 export type View = 'map' | 'go' | 'prob' | 'net';
@@ -70,9 +73,37 @@ interface Props {
   focusRole: RoleKey;
   options: OptionsResponse | null;
   probId: string;
+  placeType: ObstacleType | null;
   onSelect: (shipmentId: string) => void;
   onPickProb: (id: string) => void;
   onVerdict: (disruptionId: string, v: Verdict) => void;
+  onPlaceCancel: () => void;
+  onObstaclePlaced: (type: ObstacleType, lat: number, lng: number) => void;
+  onObstacleRejected: (reason: string) => void;
+}
+
+function shipmentRoutes(board: Board | null) {
+  if (!board) return [];
+  return board.shipments.map((row) => ({
+    shipmentId: row.id,
+    latlngs: row.route.geometry as Array<[number, number]>,
+  }));
+}
+
+function trySnapPlace(
+  type: ObstacleType,
+  lat: number,
+  lng: number,
+  board: Board | null,
+  onPlaced: (type: ObstacleType, lat: number, lng: number) => void,
+  onRejected: (reason: string) => void,
+) {
+  const hit = snapToNearestRoute(lat, lng, shipmentRoutes(board));
+  if (!hit) {
+    onRejected('Drop on a route.');
+    return;
+  }
+  onPlaced(type, hit.lat, hit.lng);
 }
 
 export function DispatchMap(p: Props) {
@@ -258,6 +289,59 @@ export function DispatchMap(p: Props) {
     const id = window.setTimeout(() => fitRef.current(), 340);
     return () => window.clearTimeout(id);
   }, [p.view, p.selectedId, p.focusRole, p.probId, p.options]);
+
+  // HTML5 drop of palette obstacles onto a shipment route.
+  useEffect(() => {
+    const node = el.current;
+    const m = map.current;
+    if (!node || !m) return;
+
+    const onDragOver = (e: DragEvent) => {
+      const dt = e.dataTransfer;
+      if (!dt || ![...dt.types].includes(OBSTACLE_MIME)) return;
+      e.preventDefault();
+      dt.dropEffect = 'copy';
+    };
+    const onDrop = (e: DragEvent) => {
+      const dt = e.dataTransfer;
+      if (!dt) return;
+      const type = dt.getData(OBSTACLE_MIME) as ObstacleType;
+      if (!type) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const ll = m.mouseEventToLatLng(e);
+      trySnapPlace(type, ll.lat, ll.lng, cb.current.board, cb.current.onObstaclePlaced, cb.current.onObstacleRejected);
+    };
+    node.addEventListener('dragover', onDragOver);
+    node.addEventListener('drop', onDrop);
+    return () => {
+      node.removeEventListener('dragover', onDragOver);
+      node.removeEventListener('drop', onDrop);
+    };
+  }, []);
+
+  // Click-to-place mode + Escape cancel.
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !p.placeType) return;
+    const type = p.placeType;
+    const onClick = (e: L.LeafletMouseEvent) => {
+      L.DomEvent.stopPropagation(e);
+      trySnapPlace(type, e.latlng.lat, e.latlng.lng, cb.current.board, cb.current.onObstaclePlaced, cb.current.onObstacleRejected);
+      cb.current.onPlaceCancel();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') cb.current.onPlaceCancel();
+    };
+    m.getContainer().style.cursor = 'crosshair';
+    m.on('click', onClick);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      m.getContainer().style.cursor = '';
+      m.off('click', onClick);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [p.placeType]);
 
   return <div id="map" ref={el} role="region" aria-label="Map of trucks, routes and road conditions" />;
 }
