@@ -547,8 +547,9 @@ export interface components {
             suggested: boolean;
             /**
              * @description Which route roles this option wins among the feasible `keep` and `reroute` options of this shipment.
-             *     efficiency = earliest eta_min. sustainability = lowest co2_kg. community = highest community_score
-             *     among those arriving within 30 minutes of the earliest. One option may hold several roles; other
+             *     efficiency = earliest eta_min. sustainability = lowest co2_kg and community = highest community_score,
+             *     each chosen only among options arriving within 30 minutes of the earliest, so a route that
+             *     crosses a closure and arrives hours late is never presented as the green or the neighborly choice. One option may hold several roles; other
              *     option kinds and infeasible options always have an empty array. Each role is held by exactly one
              *     option whenever at least one feasible keep/reroute option exists (ties go to the earlier option).
              */

@@ -179,8 +179,8 @@ function assignRoles(options: ResponseOption[]) {
   const best = (cands: ResponseOption[], better: (a: ResponseOption, b: ResponseOption) => boolean) =>
     cands.reduce((a, b) => (better(b, a) ? b : a));
   best(pool, (a, b) => a.evaluation.eta_min < b.evaluation.eta_min).roles.push('efficiency');
-  best(pool, (a, b) => a.evaluation.co2_kg < b.evaluation.co2_kg).roles.push('sustainability');
   const earliest = Math.min(...pool.map((o) => o.evaluation.eta_min));
   const near = pool.filter((o) => o.evaluation.eta_min <= earliest + 30);
+  best(near, (a, b) => a.evaluation.co2_kg < b.evaluation.co2_kg).roles.push('sustainability');
   best(near, (a, b) => a.evaluation.community_score > b.evaluation.community_score).roles.push('community');
 }
