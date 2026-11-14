@@ -6,14 +6,33 @@ export type ObstacleDef = {
   type: ObstacleType;
   label: string;
   kind: 'closure' | 'hazard' | 'slowdown';
+  /** Public URL for the map / palette symbol. */
+  icon: string;
 };
 
 export const OBSTACLES: readonly ObstacleDef[] = [
-  { type: 'road_closure', label: 'Road closure', kind: 'closure' },
-  { type: 'wildfire', label: 'Wildfire', kind: 'hazard' },
-  { type: 'flood', label: 'Flood', kind: 'hazard' },
-  { type: 'traffic', label: 'Traffic', kind: 'slowdown' },
+  { type: 'road_closure', label: 'Road closure', kind: 'closure', icon: '/map-icons/obstacle-road_closure.png' },
+  { type: 'wildfire', label: 'Wildfire', kind: 'hazard', icon: '/map-icons/obstacle-wildfire.png' },
+  { type: 'flood', label: 'Flood', kind: 'hazard', icon: '/map-icons/obstacle-flood.png' },
+  { type: 'traffic', label: 'Traffic', kind: 'slowdown', icon: '/map-icons/obstacle-traffic.png' },
 ] as const;
+
+export function obstacleIconSrc(type: ObstacleType): string {
+  return OBSTACLES.find((o) => o.type === type)!.icon;
+}
+
+/** Best-effort map from a board disruption back to a palette symbol. */
+export function obstacleTypeForDisruption(d: { kind: string; label: string }): ObstacleType | null {
+  if (d.kind === 'closure') return 'road_closure';
+  if (d.kind === 'slowdown') return 'traffic';
+  if (d.kind === 'hazard') {
+    const l = d.label.toLowerCase();
+    if (l.includes('flood')) return 'flood';
+    if (l.includes('fire') || l.includes('wild')) return 'wildfire';
+    return 'wildfire';
+  }
+  return null;
+}
 
 const DEFAULTS: Record<
   ObstacleType,

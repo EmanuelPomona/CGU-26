@@ -30,16 +30,17 @@ export function ObstaclePalette(props: {
             <button
               key={o.type}
               type="button"
-              className={`obstacle-chip${on ? ' on' : ''}`}
+              className={`obstacle-chip icon${on ? ' on' : ''}`}
               data-obstacle-type={o.type}
+              title={o.label}
+              aria-label={o.label}
               draggable={!disabled}
-              aria-grabbed={on}
               aria-pressed={on}
               disabled={disabled}
               onDragStart={onDragStart(o.type)}
               onClick={() => onChipClick(o.type)}
             >
-              {o.label}
+              <img src={o.icon} alt="" draggable={false} />
             </button>
           );
         })}

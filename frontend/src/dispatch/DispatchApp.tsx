@@ -340,16 +340,16 @@ export default function DispatchApp() {
   };
 
   const onStudioPickTruck = (truckId: string) => {
-    if (!truckId) {
-      setStudioTruckId(null);
-      setStudioPickingDest(false);
-      return;
-    }
     setStudioSession(null);
     setStudioFocusAltId(null);
     setStudioError(null);
     setStudioTruckId(truckId);
     setStudioPickingDest(true);
+  };
+
+  const onStudioCancelDest = () => {
+    setStudioPickingDest(false);
+    setStudioTruckId(null);
   };
 
   const onStudioPickDestination = async (lat: number, lng: number) => {
@@ -604,6 +604,7 @@ export default function DispatchApp() {
           onObstacleRejected={(reason) => toast(reason)}
           onStudioPickTruck={onStudioPickTruck}
           onStudioPickDestination={onStudioPickDestination}
+          onStudioCancelDest={onStudioCancelDest}
         />
         <button id="expand" onClick={() => setView('map')}>Expand map</button>
         {showObstaclePalette(view, { studioMode, hasStudioSession: Boolean(studioSession) }) && (

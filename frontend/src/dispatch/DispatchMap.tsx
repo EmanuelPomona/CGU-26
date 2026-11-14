@@ -119,6 +119,7 @@ interface Props {
   onObstacleRejected: (reason: string) => void;
   onStudioPickTruck?: (truckId: string) => void;
   onStudioPickDestination?: (lat: number, lng: number) => void;
+  onStudioCancelDest?: () => void;
 }
 
 function shipmentRoutes(board: Board | null) {
@@ -521,7 +522,7 @@ export function DispatchMap(p: Props) {
       cb.current.onStudioPickDestination?.(e.latlng.lat, e.latlng.lng);
     };
     const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') cb.current.onStudioPickTruck?.('');
+      if (ev.key === 'Escape') cb.current.onStudioCancelDest?.();
     };
     m.getContainer().style.cursor = 'crosshair';
     m.on('click', onClick);
