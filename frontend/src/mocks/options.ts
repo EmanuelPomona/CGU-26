@@ -29,6 +29,7 @@ function finish(drafts: Draft[], keep: Evaluation): ResponseOption[] {
     feasible: !d.infeasible_reason,
     infeasible_reason: d.infeasible_reason ?? null,
     suggested: false,
+    roles: [],
     evaluation: d.evaluation,
     delta: {
       late_min: d.evaluation.late_min - keep.late_min,
@@ -156,6 +157,7 @@ export function buildOptions(state: MockState, shipmentId: string): OptionsRespo
   const [k, ...rest] = drafts;
   rest.sort((a, b) => b.overall - a.overall);
   const options = finish([k, ...rest], keepEval);
+  assignRoles(options);
   const feasible = options.filter((o) => o.feasible && o.id !== 'keep');
   const suggested = feasible.length
     ? feasible.reduce((a, b) => (b.scores.overall > a.scores.overall ? b : a))
@@ -168,4 +170,17 @@ export function buildOptions(state: MockState, shipmentId: string): OptionsRespo
       : `${suggested.title} has the highest weighted score (${suggested.scores.overall} of 100) under your priorities: reliability 35, cost 20, emissions 20, community 15, driver 10. It raises the on-time chance to ${Math.round(suggested.evaluation.on_time_probability * 100)}%.`;
 
   return { shipment_id: seed.id, weights: WEIGHTS, options, suggested_option_id: suggested.id, rationale };
+}
+
+/** Fake-server copy of the contract rule for Option.roles (docs/openapi.yaml). */
+function assignRoles(options: ResponseOption[]) {
+  const pool = options.filter((o) => o.feasible && (o.kind === 'keep' || o.kind === 'reroute'));
+  if (!pool.length) return;
+  const best = (cands: ResponseOption[], better: (a: ResponseOption, b: ResponseOption) => boolean) =>
+    cands.reduce((a, b) => (better(b, a) ? b : a));
+  best(pool, (a, b) => a.evaluation.eta_min < b.evaluation.eta_min).roles.push('efficiency');
+  best(pool, (a, b) => a.evaluation.co2_kg < b.evaluation.co2_kg).roles.push('sustainability');
+  const earliest = Math.min(...pool.map((o) => o.evaluation.eta_min));
+  const near = pool.filter((o) => o.evaluation.eta_min <= earliest + 30);
+  best(near, (a, b) => a.evaluation.community_score > b.evaluation.community_score).roles.push('community');
 }

@@ -545,6 +545,14 @@ export interface components {
             infeasible_reason: string | null;
             /** @description at most one option per response; never an infeasible one */
             suggested: boolean;
+            /**
+             * @description Which route roles this option wins among the feasible `keep` and `reroute` options of this shipment.
+             *     efficiency = earliest eta_min. sustainability = lowest co2_kg. community = highest community_score
+             *     among those arriving within 30 minutes of the earliest. One option may hold several roles; other
+             *     option kinds and infeasible options always have an empty array. Each role is held by exactly one
+             *     option whenever at least one feasible keep/reroute option exists (ties go to the earlier option).
+             */
+            roles: ("efficiency" | "sustainability" | "community")[];
             evaluation: components["schemas"]["Evaluation"];
             delta: components["schemas"]["OptionDelta"];
             scores: components["schemas"]["OptionScores"];
@@ -671,7 +679,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description the request is well-formed but cannot be applied in the current state */
+        /** @description the request is well-formed but cannot be applied in the current state (infeasible or stale option, or a truck swap must be undone first) */
         Conflict: {
             headers: {
                 [name: string]: unknown;
