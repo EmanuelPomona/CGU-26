@@ -112,7 +112,9 @@ export default function App() {
           <span>
             Dispatch clock <strong className="mono">{board ? clock(board.settings.clock_min) : '8:00 AM'}</strong>
           </span>
-          <span className={active.length ? 'head-scenario-changed' : undefined}>{scenario}</span>
+          <span className={active.length ? 'head-scenario-changed' : undefined} role="status" aria-live="polite">
+            {scenario}
+          </span>
           {usingMock && <span>Mock data</span>}
         </p>
         <nav className="head-nav" aria-label="Views">

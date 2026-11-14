@@ -171,7 +171,20 @@ export function OptionLabel({ option: o, normal, scale, isKeep, action, picked, 
           <strong>Not possible.</strong> {o.infeasible_reason}
         </p>
       )}
-      {action}
+      {action ??
+        (onPick && o.feasible && (
+          <button
+            type="button"
+            className="btn ol-choose"
+            aria-pressed={!!picked}
+            onClick={(ev) => {
+              ev.stopPropagation();
+              onPick();
+            }}
+          >
+            {picked ? 'Selected' : 'Select'}
+          </button>
+        ))}
     </article>
   );
 }
