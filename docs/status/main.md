@@ -1,5 +1,5 @@
 # STATUS: main
-Task: planning (Mode A)
+Task: planning (Mode A) complete
 Round: 0
 Last updated: 2026-11-14T19:25:00Z
 
@@ -9,6 +9,7 @@ Last updated: 2026-11-14T19:25:00Z
 - ecc:contract-first @ before API.md/openapi.yaml -> made openapi.yaml the single authority (API.md is prose only), required generated frontend types and a provider-side schema test, every mutation returns the Board
 - superpowers:writing-plans @ before task files -> tasks carry exact files, produced interfaces, spec values and named tests; review-focus cases (duplicate preset, all options infeasible, backend down, 409 on stale option, tiles failing) added to owning tasks
 - ecc:architecture-decision-records @ DECISIONS.md -> six ADRs with alternatives; kept in docs/DECISIONS.md per project rule rather than docs/adr/
+- superpowers:verification-before-completion @ before declaring planning done -> ran the checks listed under Verified; found one intended scope overlap (feeds.py, TASK-001 stub then TASK-005) and no gaps
 
 ## Done
 - [x] Read resources in ~/Downloads/CGU Hack: agent context md, GEOAI_TRACK_NEW.docx, workshop PDF (15 pages, via PDFKit), two whiteboard photos, existing prototype index.html + serve.py
@@ -23,10 +24,17 @@ Last updated: 2026-11-14T19:25:00Z
 - [x] 6 ADRs, docs/handoffs/main.md
 
 ## In progress
-- [ ] Final verification, then launch workers
+- [ ] Planning complete. Next session on main is Mode B (integration), started fresh.
 
 ## Verified
 - Supplied folder contains only GeoAI material (no DPM kit/JSON files); whiteboard is headed "GeoAI" -> ls of the folder, photos
+
+- openapi.yaml parses; 13 paths, 39 schemas, 0 dangling refs, 0 required-but-undefined properties -> python yaml check, 2026-11-14 11:29
+- all 14 client operations named in TASK-101 exist in the YAML -> same script
+- no template placeholders left in the 7 planning docs -> same script
+- task scopes do not overlap across owners (only feeds.py, TASK-001 then TASK-005, same owner) -> same script
+- every acceptance id cited in a task exists in ACCEPTANCE.md (33 ids) -> same script
+- scripts/tasks.sh regenerates INDEX with 11 tasks; working tree clean; 36 commits on main -> command output
 
 ## Blocked on
 - nothing (presentation deadline unconfirmed; assumed 18:00, freeze 16:00)
