@@ -76,6 +76,7 @@
   font-size: var(--fs-xs);
 }
 .legend summary {
+  min-height: 24px;
   cursor: pointer;
   font-family: var(--font-display);
   font-weight: 600;

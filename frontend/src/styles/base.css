@@ -146,3 +146,21 @@ textarea {
     animation-duration: 0ms !important;
   }
 }
+
+/* Polish pass (ecc:make-interfaces-feel-better) */
+html { -moz-osx-font-smoothing: grayscale; }
+
+/* Short titles balance; captions and descriptions avoid orphans. */
+.board-title h2, .ol-head h3, .opts-head h2, .verify-head h2, .cond-h,
+.method-head h2, .method h3, .shell-state h2 { text-wrap: balance; }
+.preset-desc, .ol-desc, .opts-rationale p, .ind-checks li, .cond-empty,
+.verify-explain, .ol-burden li, .ol-notes li, .method-head p { text-wrap: pretty; }
+
+/* Figures that change between scenarios keep their width. */
+.ol-value, .status-word, .ind-delta, .ol-delta, .verify-facts dd { font-variant-numeric: tabular-nums; }
+
+/* Thumb reach at 390: every control in panels is at least 44px tall. */
+@media (max-width: 640px) {
+  .opts .btn, .log .btn, .sup .btn, .dz .btn, .legend summary, .legend-toggle { min-height: 44px; }
+  .legend summary { display: flex; align-items: center; }
+}
