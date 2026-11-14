@@ -1,8 +1,8 @@
 .board {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   min-height: 0;
-  height: 100%;
 }
 
 .board-title {
@@ -21,6 +21,7 @@
 .board-title-risk { color: var(--at-risk); font-weight: 600; }
 
 .board-grid {
+  position: relative;
   overflow-y: auto;
   min-height: 0;
   border-top: var(--heavy);
@@ -123,3 +124,6 @@
   .col-status { grid-area: status; }
   .status-word { font-size: var(--fs-lg); }
 }
+
+.board-row-skel { cursor: default; min-height: 54px; }
+.board-row-skel .col-status { align-items: flex-end; }

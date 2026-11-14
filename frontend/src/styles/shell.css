@@ -13,6 +13,14 @@
   overflow: hidden;
 }
 
+/* Every region is positioned so absolutely positioned descendants (screen-reader text, popovers)
+   are clipped by the region that scrolls them instead of extending the document. */
+.region-head,
+.region-cond,
+.region-ind,
+.region-board,
+.region-detail { position: relative; }
+
 .region-head { grid-area: head; }
 .region-cond { grid-area: cond; }
 .region-ind { grid-area: ind; }
@@ -132,7 +140,9 @@
       'board';
   }
   .head-narrow-only { display: inline-flex; }
-  .region-board { border-left: 0; border-top: var(--heavy); }
+  .region-board { border-left: 0; border-top: var(--heavy); overflow-y: auto; }
+  .region-board .board { flex: none; }
+  .region-board .board-grid { overflow: visible; }
   .region-ind { overflow-x: auto; }
 
   .region-cond,
