@@ -89,14 +89,15 @@ By the end of the hackathon, a user must be able to:
 
 1. Open the app. The board shows the **normal day**: 7 shipments, all on time or
    tight, indicators at baseline.
-2. Click the preset **Road closure (SR-60)**. The map shows the closure, two
-   shipments turn at risk, the indicator strip shows normal vs changed.
+2. Click the preset **Road closure (SR-60)**. The map shows the closure, the
+   shipments whose routes cross it turn tight or at risk, and the indicator
+   strip shows normal vs changed.
 3. The verification prompt asks whether the closure is confirmed. Click
    **Dismiss, road is open**: the shipments return to normal. Click **Undo**,
    then **Confirm**: they are at risk again, now without the "unverified" mark.
 4. Select the at-risk shipment. The options panel lists keep plan, two reroutes,
-   a spare truck, a later appointment. The reroute that saves the appointment
-   adds miles and passes two schools on local streets; the panel says so.
+   a spare truck, a later appointment. A reroute that saves the appointment
+   adds miles and may pass schools on local streets; the panel says so.
 5. Choose the recommended option, or override it with another and give a reason.
 6. The supervisor update is drafted; copy it. The decision appears in the log.
    The indicator strip now shows three columns: normal, changed, after decision.
