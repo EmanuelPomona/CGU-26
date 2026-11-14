@@ -1,0 +1,8 @@
+Browser console, primary demo flow (PRODUCT.md steps 1-7), one session, no reload.
+Captured 2026-11-14 ~12:00 PST, Playwright Chromium, 1440x900, frontend agent/frontend, VITE_USE_MOCK=0.
+Backend: private read-and-run copy of agent/backend @ 69a7052 on :8001 (no edits).
+Flow: load -> close60 -> Dismiss -> Re-open -> Confirm -> select C-103 -> choose suggested -> Method.
+Level captured: warning and above (errors included).
+
+Total messages: 4 (Errors: 0, Warnings: 0)
+Returning 0 messages for level "warning"
