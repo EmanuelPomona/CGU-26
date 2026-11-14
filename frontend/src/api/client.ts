@@ -3,6 +3,7 @@
 import type {
   Board, DecisionCreate, DecisionResult, DisruptionCreate, DisruptionUpdate, ErrorBody,
   FeedCandidates, Method, Network, OptionsResponse, PresetList, Settings,
+  StudioObstacleCreate, StudioSession, StudioSessionCreate,
 } from './types';
 
 export class ApiError extends Error {
@@ -83,3 +84,12 @@ export const getOptions = (shipmentId: string) =>
 export const createDecision = (d: DecisionCreate) => call<DecisionResult>('POST', '/api/decisions', d);
 export const deleteDecision = (id: string) => call<Board>('DELETE', `/api/decisions/${enc(id)}`);
 export const getFeedCandidates = () => call<FeedCandidates>('GET', '/api/feeds/candidates');
+
+export const createStudioSession = (body: StudioSessionCreate) =>
+  call<StudioSession>('POST', '/api/studio/session', body);
+export const getStudioSession = (id: string) =>
+  call<StudioSession>('GET', `/api/studio/session/${enc(id)}`);
+export const addStudioObstacle = (sessionId: string, body: StudioObstacleCreate) =>
+  call<StudioSession>('POST', `/api/studio/session/${enc(sessionId)}/obstacles`, body);
+export const deleteStudioObstacle = (sessionId: string, obstacleId: string) =>
+  call<StudioSession>('DELETE', `/api/studio/session/${enc(sessionId)}/obstacles/${enc(obstacleId)}`);

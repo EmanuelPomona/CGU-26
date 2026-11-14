@@ -13,4 +13,9 @@ describe('placeMode helpers', () => {
     expect(showObstaclePalette('prob')).toBe(false);
     expect(showObstaclePalette('net')).toBe(false);
   });
+
+  it('shows the palette in Route studio only after a session exists', () => {
+    expect(showObstaclePalette('map', { studioMode: true, hasStudioSession: false })).toBe(false);
+    expect(showObstaclePalette('map', { studioMode: true, hasStudioSession: true })).toBe(true);
+  });
 });

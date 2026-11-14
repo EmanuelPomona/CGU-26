@@ -234,6 +234,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/studio/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start a Route studio OD session from a truck to a destination */
+        post: operations["createStudioSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/studio/session/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch a Route studio session */
+        get: operations["getStudioSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/studio/session/{session_id}/obstacles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add an obstacle and recompute three alternatives */
+        post: operations["addStudioObstacle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/studio/session/{session_id}/obstacles/{obstacle_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a studio obstacle and recompute */
+        delete: operations["deleteStudioObstacle"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -660,6 +728,63 @@ export interface components {
             sources: components["schemas"]["FeedSource"][];
             candidates: components["schemas"]["FeedCandidate"][];
         };
+        StudioSessionCreate: {
+            truck_id: string;
+            destination: {
+                lat: number;
+                lng: number;
+            };
+        };
+        StudioObstacleCreate: {
+            /** @enum {string} */
+            type: "road_closure" | "wildfire" | "flood" | "traffic";
+            lat: number;
+            lng: number;
+        };
+        StudioMetrics: {
+            eta_min: number;
+            distance_km: number;
+            co2_kg: number;
+            obstacle_exposure: number;
+            local_street_km: number;
+        };
+        StudioAlternative: {
+            id: string;
+            /** @enum {string} */
+            slot: "fastest" | "direct" | "avoid";
+            algorithm: string;
+            label: string;
+            feasible: boolean;
+            infeasible_reason?: string | null;
+            summary: string;
+            pros: string[];
+            cons: string[];
+            metrics: components["schemas"]["StudioMetrics"];
+            geometry: number[][];
+            node_ids: string[];
+        };
+        StudioObstacle: {
+            id: string;
+            type: string;
+            label: string;
+            lat: number;
+            lng: number;
+            radius_km: number;
+            confidence: number;
+        };
+        StudioSession: {
+            id: string;
+            truck_id: string;
+            origin: {
+                [key: string]: unknown;
+            };
+            destination: {
+                [key: string]: unknown;
+            };
+            baseline: components["schemas"]["StudioAlternative"];
+            alternatives: components["schemas"]["StudioAlternative"][];
+            obstacles: components["schemas"]["StudioObstacle"][];
+        };
     };
     responses: {
         /** @description request body or parameter failed validation */
@@ -1058,6 +1183,103 @@ export interface operations {
                     "application/json": components["schemas"]["FeedCandidates"];
                 };
             };
+        };
+    };
+    createStudioSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudioSessionCreate"];
+            };
+        };
+        responses: {
+            /** @description session with baseline and three alternatives */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudioSession"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getStudioSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudioSession"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    addStudioObstacle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudioObstacleCreate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudioSession"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deleteStudioObstacle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                obstacle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudioSession"];
+                };
+            };
+            404: components["responses"]["NotFound"];
         };
     };
 }

@@ -2,14 +2,18 @@
 // view is a scripted example. The browser never ranks options or computes a figure.
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
-  ApiError, createDecision, createDisruption, deleteDecision, deleteDisruption, getNetwork, getOptions, getPresets, updateDisruption,
+  ApiError, addStudioObstacle, createDecision, createDisruption, createStudioSession, deleteDecision, deleteDisruption,
+  getNetwork, getOptions, getPresets, updateDisruption,
 } from '../api/client';
-import type { Board, Decision, Disruption, Network, OptionsResponse, Preset, ResponseOption, ShipmentRow } from '../api/types';
+import type {
+  Board, Decision, Disruption, Network, OptionsResponse, Preset, ResponseOption, ShipmentRow, StudioSession,
+} from '../api/types';
 import { useBoard } from '../api/useBoard';
 import { DispatchMap, type Verdict, type View } from './DispatchMap';
 import { ObstaclePalette } from './ObstaclePalette';
 import { toDisruptionCreate, type ObstacleType } from './obstacleCatalog';
 import { showObstaclePalette } from './placeMode';
+import { RouteStudio } from './RouteStudio';
 import { BAD, GOOD, INK, OBJ, ONROUTE, PROB, ROLE, ROLE_ORDER, fatLbl, type RoleKey, type Tag } from './data';
 import './dispatch.css';
 
@@ -137,6 +141,61 @@ function Compare({ board, compact }: { board: Board; compact?: boolean }) {
   );
 }
 
+/** Map-only: compare panel stays tucked behind a button until opened. */
+function CompareMenu({ board }: { board: Board }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const active = board.disruptions.some((d) => d.verification !== 'dismissed');
+  const hasDec = board.decisions.length > 0;
+  const riskDelta = board.indicators.changed.shipments_at_risk - board.indicators.normal.shipments_at_risk;
+  const show = active || hasDec;
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (root.current && !root.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!show) setOpen(false);
+  }, [show]);
+
+  if (!show) return null;
+
+  return (
+    <div className={`cmpmenu${open ? ' open' : ''}`} ref={root}>
+      <button
+        type="button"
+        className={`cmpmenu-btn${riskDelta > 0 ? ' alert' : ''}`}
+        aria-expanded={open}
+        aria-controls="cmpmenu-panel"
+        onClick={() => setOpen((o) => !o)}
+      >
+        Day vs changed
+        {riskDelta > 0 && <span className="cmpmenu-badge">+{riskDelta} at risk</span>}
+        <span className="cmpmenu-chev" aria-hidden="true">
+          {open ? '▾' : '▴'}
+        </span>
+      </button>
+      {open && (
+        <div id="cmpmenu-panel" className="cmpmenu-panel" role="region" aria-label="Normal day versus changed">
+          <Compare board={board} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** "Explain this option": assembled only from the server's text for that option. */
 function explain(o: ResponseOption, rationale: string): string[] {
   const out: string[] = [];
@@ -181,6 +240,13 @@ export default function DispatchApp() {
   const [placeType, setPlaceType] = useState<ObstacleType | null>(null);
   const [toastText, setToastText] = useState('');
   const [copied, setCopied] = useState(false);
+  const [studioMode, setStudioMode] = useState(false);
+  const [studioSession, setStudioSession] = useState<StudioSession | null>(null);
+  const [studioTruckId, setStudioTruckId] = useState<string | null>(null);
+  const [studioPickingDest, setStudioPickingDest] = useState(false);
+  const [studioFocusAltId, setStudioFocusAltId] = useState<string | null>(null);
+  const [studioBusy, setStudioBusy] = useState(false);
+  const [studioError, setStudioError] = useState<string | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
   const optSeq = useRef(0);
 
@@ -238,13 +304,79 @@ export default function DispatchApp() {
     if (v === 'delete') return run(() => deleteDisruption(id), 'Report removed');
     return run(() => updateDisruption(id, { verification: v }), v === 'dismissed' ? 'Marked open: figures back to normal' : v === 'confirmed' ? 'Confirmed' : 'Back to unverified');
   };
+  const clearStudio = useCallback(() => {
+    setStudioSession(null);
+    setStudioTruckId(null);
+    setStudioPickingDest(false);
+    setStudioFocusAltId(null);
+    setStudioError(null);
+    setStudioBusy(false);
+    setPlaceType(null);
+  }, []);
+
   const placeObstacle = async (type: ObstacleType, lat: number, lng: number) => {
     setPlaceType(null);
+    if (studioMode) {
+      if (!studioSession) {
+        toast('Pick truck and destination first.');
+        return;
+      }
+      setStudioBusy(true);
+      setStudioError(null);
+      try {
+        const next = await addStudioObstacle(studioSession.id, { type, lat, lng });
+        setStudioSession(next);
+        setStudioFocusAltId(null);
+        toast('Obstacle placed — routes updated');
+      } catch (e) {
+        setStudioError(msg(e));
+        toast(msg(e));
+      } finally {
+        setStudioBusy(false);
+      }
+      return;
+    }
     await run(() => createDisruption(toDisruptionCreate(type, lat, lng)), 'Obstacle placed');
   };
+
+  const onStudioPickTruck = (truckId: string) => {
+    if (!truckId) {
+      setStudioTruckId(null);
+      setStudioPickingDest(false);
+      return;
+    }
+    setStudioSession(null);
+    setStudioFocusAltId(null);
+    setStudioError(null);
+    setStudioTruckId(truckId);
+    setStudioPickingDest(true);
+  };
+
+  const onStudioPickDestination = async (lat: number, lng: number) => {
+    if (!studioTruckId) return;
+    setStudioPickingDest(false);
+    setStudioBusy(true);
+    setStudioError(null);
+    try {
+      const session = await createStudioSession({ truck_id: studioTruckId, destination: { lat, lng } });
+      setStudioSession(session);
+      toast('Route session ready');
+    } catch (e) {
+      setStudioError(msg(e));
+      setStudioPickingDest(true);
+      toast(msg(e));
+    } finally {
+      setStudioBusy(false);
+    }
+  };
+
   useEffect(() => {
-    if (!showObstaclePalette(view)) setPlaceType(null);
-  }, [view]);
+    if (!showObstaclePalette(view, { studioMode, hasStudioSession: Boolean(studioSession) })) setPlaceType(null);
+  }, [view, studioMode, studioSession]);
+
+  useEffect(() => {
+    if (!studioMode) clearStudio();
+  }, [studioMode, clearStudio]);
 
   const decide = async (o: ResponseOption, why?: string) => {
     if (!selectedId) return;
@@ -297,7 +429,7 @@ export default function DispatchApp() {
   const trMsgs: Msg[] = driverMsgs[probId] ?? p.chat.map(([kind, time, text]) => ({ kind, html: esc(text), time: `${time} AM` }));
   const addDriverMsg = (m: Msg) => setDriverMsgs((all) => ({ ...all, [probId]: [...(all[probId] ?? trMsgs), m] }));
   const problems = ONROUTE.filter((x) => x.prob).length;
-  const cls = `dapp ${view === 'map' ? 'home' : 'work'} ${view === 'net' ? 'net' : ''}`;
+  const cls = `dapp ${view === 'map' || studioMode ? 'home' : 'work'} ${view === 'net' && !studioMode ? 'net' : ''}${studioMode ? ' studio' : ''}`;
 
   const roleCard = ({ role, o }: { role: RoleKey; o: ResponseOption | null }, idx: number) => {
     const st = ROLE[role];
@@ -421,15 +553,28 @@ export default function DispatchApp() {
       <div className="top">
         <span className="brand">Dispatch</span>
         <nav className="nav" aria-label="Views">
-          <button className={view === 'map' ? 'on' : ''} onClick={() => setView('map')}>Map</button>
-          <button className={view === 'go' ? 'on' : ''} onClick={() => setView('go')}>
+          <button className={view === 'map' ? 'on' : ''} onClick={() => { setStudioMode(false); setView('map'); }}>Map</button>
+          <button className={view === 'go' ? 'on' : ''} onClick={() => { setStudioMode(false); setView('go'); }}>
             To dispatch<span className="n">{board?.shipments.length ?? 0}</span>
           </button>
-          <button className={view === 'prob' ? 'on' : ''} onClick={() => setView('prob')}>
+          <button className={view === 'prob' ? 'on' : ''} onClick={() => { setStudioMode(false); setView('prob'); }}>
             On route<span className="n alert">{problems}</span>
           </button>
-          <button className={view === 'net' ? 'on' : ''} onClick={() => setView('net')}>Network</button>
+          <button className={view === 'net' ? 'on' : ''} onClick={() => { setStudioMode(false); setView('net'); }}>Network</button>
         </nav>
+        <div className="mode-toggle" role="group" aria-label="Workspace">
+          <button type="button" className={!studioMode ? 'on' : ''} onClick={() => setStudioMode(false)}>Board</button>
+          <button
+            type="button"
+            className={studioMode ? 'on' : ''}
+            onClick={() => {
+              setStudioMode(true);
+              setView('map');
+            }}
+          >
+            Route studio
+          </button>
+        </div>
         <span className="clock">{board ? clock(board.settings.clock_min) : ''}</span>
       </div>
 
@@ -443,6 +588,11 @@ export default function DispatchApp() {
           options={opts}
           probId={probId}
           placeType={placeType}
+          studioMode={studioMode}
+          studioSession={studioSession}
+          studioFocusAltId={studioFocusAltId}
+          studioPickingDest={studioPickingDest}
+          studioSelectedTruckId={studioTruckId}
           onSelect={select}
           onPickProb={(id) => {
             setProbId(id);
@@ -452,25 +602,46 @@ export default function DispatchApp() {
           onPlaceCancel={() => setPlaceType(null)}
           onObstaclePlaced={placeObstacle}
           onObstacleRejected={(reason) => toast(reason)}
+          onStudioPickTruck={onStudioPickTruck}
+          onStudioPickDestination={onStudioPickDestination}
         />
         <button id="expand" onClick={() => setView('map')}>Expand map</button>
-        {showObstaclePalette(view) && (
-          <ObstaclePalette selected={placeType} onSelect={setPlaceType} disabled={!board} />
+        {showObstaclePalette(view, { studioMode, hasStudioSession: Boolean(studioSession) }) && (
+          <ObstaclePalette selected={placeType} onSelect={setPlaceType} disabled={studioMode ? !studioSession : !board} />
         )}
-        {view === 'map' && board && (
-          <div className="cmpfloat">
-            <Compare board={board} />
-          </div>
+        {studioMode && (
+          <RouteStudio
+            session={studioSession}
+            pickingDest={studioPickingDest}
+            selectedTruckId={studioTruckId}
+            focusAltId={studioFocusAltId}
+            busy={studioBusy}
+            error={studioError}
+            onFocusAlt={setStudioFocusAltId}
+            onClear={clearStudio}
+          />
         )}
+        {view === 'map' && !studioMode && board && <CompareMenu board={board} />}
         <div className={`legend ${legendOpen ? 'open' : ''}`}>
           <button className="lt" aria-expanded={legendOpen} onClick={() => setLegendOpen((o) => !o)}>
             Legend {legendOpen ? '−' : '+'}
           </button>
           <div className="lb">
+            {studioMode ? (
+              <>
+                <h5>Studio routes</h5>
+                <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke="#0a7a3e" strokeWidth="4" /></svg>Fastest</div>
+                <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke="#1a4a8a" strokeWidth="4" strokeDasharray="7 4" /></svg>Direct</div>
+                <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke="#8a4a10" strokeWidth="4" strokeDasharray="1 4" strokeLinecap="round" /></svg>Avoid hazards</div>
+              </>
+            ) : (
+              <>
             <h5>Shipment routes</h5>
             <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke={GOOD} strokeWidth="4" /></svg>On time</div>
             <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke={INK} strokeWidth="4" strokeDasharray="7 4" /></svg>Tight</div>
             <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke={BAD} strokeWidth="6" /></svg>At risk</div>
+              </>
+            )}
             <h5>Road reports</h5>
             <div><svg width="30" height="14"><circle cx="15" cy="7" r="6" fill="#4b4fa615" stroke="#4b4fa6" strokeWidth="2" strokeDasharray="4 3" /></svg>Unverified</div>
             <div><svg width="30" height="14"><circle cx="15" cy="7" r="6" fill="#d4312c30" stroke={BAD} strokeWidth="2" /></svg>Confirmed</div>
@@ -478,11 +649,13 @@ export default function DispatchApp() {
             <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke={INK} strokeWidth="3" /></svg>Efficiency</div>
             <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke={INK} strokeWidth="3" strokeDasharray="6 4" /></svg>Sustainability</div>
             <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke={INK} strokeWidth="3" strokeDasharray="1 4" strokeLinecap="round" /></svg>Community</div>
+            <h5>Places</h5>
+            <div><span className="leg-wh"><img src="/map-icons/warehouse.png" alt="" /></span>Warehouse</div>
             <h5>Trucks</h5>
-            <div><svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="#fff" stroke={GOOD} strokeWidth="3" /></svg>On time</div>
-            <div><svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="#fff" stroke={BAD} strokeWidth="3" /></svg>Tight</div>
-            <div><svg width="16" height="16"><circle cx="8" cy="8" r="7" fill={BAD} /></svg>At risk</div>
-            <div><svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="#fff" stroke="#555" strokeWidth="2" strokeDasharray="3 2" /></svg>Spare</div>
+            <div><span className="leg-tk"><img src="/map-icons/truck.png" alt="" /></span>On time</div>
+            <div><span className="leg-tk warn"><img src="/map-icons/truck.png" alt="" /></span>Tight</div>
+            <div><span className="leg-tk bad"><img src="/map-icons/truck.png" alt="" /></span>At risk</div>
+            <div><span className="leg-tk hollow"><img src="/map-icons/truck.png" alt="" /></span>Spare</div>
           </div>
         </div>
       </div>
