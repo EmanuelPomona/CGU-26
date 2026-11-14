@@ -5,6 +5,7 @@ from dataclasses import replace
 
 from app.engine import constants as K
 from app.engine.evaluate import evaluate, fmt_hm, round_half_up
+from app.engine.roles import assign_roles
 from app.engine.scoring import overall, pick_suggestion, score_parts
 
 UNVERIFIED_NOTE = "Based on an unverified report: confirm before acting."
@@ -167,6 +168,7 @@ def build_options(shipment: dict, ctx) -> dict:
     ordered = [opts[0]] + rest
     for o in ordered:
         o["suggested"] = o["id"] == suggested
+    assign_roles(ordered)
     return {"shipment_id": sid, "options": ordered, "suggested_option_id": suggested, "rationale": rationale}
 
 
@@ -203,7 +205,7 @@ def public_option(o, w) -> dict:
     return {
         "id": o["id"], "kind": o["kind"], "title": o["title"], "description": o["description"],
         "feasible": o["feasible"], "infeasible_reason": o["infeasible_reason"], "suggested": o["suggested"],
-        "evaluation": o["ev"].public(), "delta": o["delta"],
+        "roles": list(o["roles"]), "evaluation": o["ev"].public(), "delta": o["delta"],
         "scores": {**{k: float(round_half_up(max(0.0, min(100.0, v)))) for k, v in o["parts"].items()},
                    "overall": float(round_half_up(max(0.0, min(100.0, o["score"])))) if o["feasible"] else 0.0},
         "burdens": o["burdens"],
