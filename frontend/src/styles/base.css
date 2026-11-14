@@ -112,6 +112,8 @@ textarea {
 .field input,
 .field select,
 .field textarea {
+  width: 100%;
+  min-width: 0;
   min-height: 32px;
   padding: var(--s1) var(--s2);
   border: 1px solid var(--ink-2);

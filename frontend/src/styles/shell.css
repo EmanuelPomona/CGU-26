@@ -58,6 +58,7 @@
 .region-cond {
   border-right: var(--hairline);
   overflow-y: auto;
+  overflow-x: hidden;
   background: var(--canvas);
 }
 
