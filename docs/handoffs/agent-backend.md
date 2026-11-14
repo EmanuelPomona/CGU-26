@@ -137,3 +137,67 @@ The first schemathesis run found 19 problems: 13 missing `Allow` headers, 3 unde
 
 ### Commit
 `bb943d8` (code). This handoff and the status update are in the commit that follows it.
+
+## HANDOFF-2 — agent/backend — 2026-11-14
+
+### Summary
+TASK-005 is done: `GET /api/feeds/candidates` now calls the live CHP incident feed and NWS California alerts, keeps items within 2 miles of each shipment's active route (the route of the plan in force), and suggests a `DisruptionCreate` for each. It never changes the board.
+
+It is committed separately (`67dc912`) on top of HANDOFF-1 (`aa1e615`). Integration can merge `aa1e615` to take TASK-001..004 without TASK-005.
+
+### Tasks Completed
+TASK-005, all criteria met:
+- **Offline.** The endpoint answers 200 well within 6 s (tests: under 6 s offline, under 1.5 s when a source hangs). Each source reports `ok: false` with an error string. All fetches share a 5 s budget, and the endpoint does not wait for a source that hangs.
+- **Cache.** Results are cached for 60 s per source (test moves the cache clock forward). Tests use recorded fixtures in `backend/tests/fixtures/`. An autouse fixture in `conftest.py` blocks feed fetches in every test.
+- **Suggested bodies.** Every `suggested` body is accepted unchanged by `POST /api/disruptions` (201, `unverified`), with `source: "public_feed"` and confidence at most 0.7: CHP 0.7, NWS 0.4.
+- **Trust.** `trust` is `official_report` for both sources.
+- **No side effects.** The board is byte-identical before and after the call (test).
+
+### Files Changed
+- `backend/app/feeds.py` (new), `backend/app/routers/feeds.py`
+- `backend/tests/test_feeds.py`, `backend/tests/fixtures/{chp_sa.xml,nws_alerts.json}`
+- `backend/tests/conftest.py` (blocks the network in tests), `backend/tests/test_static.py` (the stub test is now an offline test)
+
+### Contracts
+No change; this implements the existing `FeedCandidates` schema.
+- CHP items become `slowdown` candidates: radius 1.5 km; factor 2.2 for hazard, fire, closure or signal types, otherwise 1.7.
+- NWS items become `hazard` candidates: radius 15 km, centered on a fixed county point. The title says "region-level", because NWS gives no road-specific location.
+- Candidate ids are `chp-<log id>` and `nws-<hash>`.
+
+### Skills Used
+| Skill | Stage invoked | What it actually changed |
+|---|---|---|
+| superpowers:verification-before-completion | after the TASK-005 commit, before this handoff | Fresh runs below; replayed schemathesis ST302 by hand to confirm it is the contracted replace-a-decision behavior |
+
+TDD for this task: `test_feeds.py` was written and seen failing (ImportError: no `app.feeds`) before `feeds.py` existed. The TDD skill was already loaded this session; it was not re-invoked.
+
+### Verification
+```
+$ cd backend && python3 -m pytest -q
+142 passed in 2.25s
+$ ruff check app tests scripts      -> All checks passed!
+$ mypy app --ignore-missing-imports -> Success: no issues found in 23 source files
+
+# live, real network, against the running service on 8012
+$ time curl -fsS localhost:8012/api/feeds/candidates
+sources: CHP incidents ok, NWS alerts ok; 8 candidates; real 1.15 s
+  e.g. chp-261114LA0757 "Trfc Collision-Unkn Inj: Sr60 W / Garey Ave Onr (Baldwin Park)" 0.02 mi, near C-103, C-107
+board disruptions after the call: 0
+
+$ st run docs/openapi.yaml --url http://localhost:8012 --checks all --max-examples 20
+668 generated: 3 ST202 (the documented rule rejections, as in HANDOFF-1) and 1 ST302.
+  ST302: a stateful sequence posted a later decision for the same shipment, which replaced DEC-n before the DELETE.
+  Replayed by hand: POST DEC-1, POST DEC-2 for the same shipment -> DELETE DEC-1 gives 404 (replaced, as contracted); DELETE DEC-2 gives 200.
+```
+
+### What Was NOT Verified
+- Live feed content changes from minute to minute. The 8 candidates above are what the feeds returned at about 12:45 PM and will differ during the demo. With no venue Wi-Fi, the endpoint returns an empty list and both sources down, which the frontend must render as such.
+- NWS candidates appear only when an alert's county point is within 2 miles of a route. None did during the live run. NWS parsing is covered only by the recorded fixture.
+- Only the CHP XML format seen today and the recorded fixture are covered. A CHP format change would show up as `ok: false`, not as wrong data.
+- Not tested in a browser.
+
+### Known Issues
+- When a source hangs, its fetch thread keeps running in the background until the socket timeout (5 s). Harmless for a single-user demo.
+
+### Commit
+`67dc912` (code). This handoff, the status update and the TASK-005 status are in the commit that follows it.

@@ -1,7 +1,7 @@
 # STATUS: agent/backend
-Task: TASK-001..004 in REVIEW; HANDOFF-1 written
+Task: TASK-001..005 in REVIEW; HANDOFF-1 and HANDOFF-2 written
 Round: 0
-Last updated: 2026-11-14T12:35:00-08:00
+Last updated: 2026-11-14T12:50:00-08:00
 
 ## Skills invoked so far
 - ecc:backend-patterns @ TASK-001 start -> layered design: thin routers, pure engine, one in-memory Store; one centralized error handler
@@ -13,6 +13,7 @@ Last updated: 2026-11-14T12:35:00-08:00
 - superpowers:requesting-code-review @ after TASK-004 + schemathesis fixes (HEAD 273d7ab) -> reviewer subagent dispatched on 54afc1c..273d7ab
 - superpowers:systematic-debugging @ before fixing review findings -> root cause: swap couples two plans under one decision id; replacement deleted both. Fix: 409 guard + partner filter (98af9ad)
 - superpowers:verification-before-completion @ immediately before committing HANDOFF-1 -> fresh: 136 passed, ruff clean, mypy clean, live 8012 board 7 rows
+- superpowers:verification-before-completion (2nd) @ after TASK-005 commit 67dc912 -> fresh: 142 passed, ruff/mypy clean, live feeds 8 candidates 1.15 s, ST302 replayed = contracted replace
 - ecc:api-design: NOT invoked — the API is fully designed by the manager in docs/openapi.yaml; backend designs no new API surface
 
 ## Done
@@ -30,14 +31,15 @@ Last updated: 2026-11-14T12:35:00-08:00
 
 - [x] code review findings fixed (swap consistency, partner hours, whitespace, before-line) -> 98af9ad
 - [x] ruff + mypy clean -> bb943d8
-- [x] HANDOFF-1 written; TASK-001..004 status REVIEW
+- [x] HANDOFF-1 written; TASK-001..004 status REVIEW -> aa1e615
+- [x] TASK-005 live feeds -> 67dc912; HANDOFF-2; status REVIEW
 
 ## In progress
-- [ ] nothing. Next if asked: TASK-005 (BACKLOG) only after review
+- [ ] nothing. Service left running on 8012 (npm run dev:backend) for the frontend, per manager
 
 ## Verified
 - seed day at 08:00: 6 on_time, 1 tight (C-105, slack 14), 0 at_risk -> python print in session
-- `python3 -m pytest -q` -> 136 passed (at bb943d8)
+- `python3 -m pytest -q` -> 142 passed (at 67dc912)
 - schemathesis 4.33.4 (scratch venv) vs live 8012: 717 cases, only 3 ST202 left = documented semantic rules (kind companions, override reason, all-zero weights)
 - live service on 8012 answers /api/board with 7 shipments
 
