@@ -9,12 +9,14 @@ Do not edit by hand — edit the task files and regenerate.
 | TASK-002 | READY | backend | 0 | Evaluation engine board and settings |
 | TASK-003 | READY | backend | 0 | Disruption lifecycle and verification |
 | TASK-004 | READY | backend | 0 | Options scoring decisions and supervisor update |
+| TASK-006 | READY | backend | 0 | Route roles on options |
 | TASK-101 | READY | frontend | 0 | Frontend scaffold tokens API client and app shell |
-| TASK-102 | READY | frontend | 0 | Board appointment strip and indicator strip |
-| TASK-103 | READY | frontend | 0 | Map view |
-| TASK-104 | READY | frontend | 0 | Conditions panel and verification prompt |
-| TASK-105 | READY | frontend | 0 | Options decision log and method page |
+| TASK-107 | READY | frontend | 0 | Wire the Dispatch UI to the backend |
 | TASK-005 | BACKLOG | backend | 0 | Live feed candidates |
-| TASK-106 | BACKLOG | frontend | 0 | Priority weights clock and feed scout |
+| TASK-102 | BACKLOG | frontend | 0 | SUPERSEDED by TASK-107 (Board appointment strip and indicator strip) |
+| TASK-103 | BACKLOG | frontend | 0 | SUPERSEDED by TASK-107 (Map view) |
+| TASK-104 | BACKLOG | frontend | 0 | SUPERSEDED by TASK-107 (Conditions panel and verification prompt) |
+| TASK-105 | BACKLOG | frontend | 0 | SUPERSEDED by TASK-107 (Options decision log and method page) |
+| TASK-106 | BACKLOG | frontend | 0 | SUPERSEDED by TASK-107 (Priority weights clock and feed scout) |
 
-**Counts:** BACKLOG 2, READY 9
+**Counts:** BACKLOG 6, READY 7

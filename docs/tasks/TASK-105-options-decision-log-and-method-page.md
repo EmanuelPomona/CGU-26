@@ -1,7 +1,7 @@
 ---
 id: TASK-105
-title: Options decision log and method page
-status: READY
+title: SUPERSEDED by TASK-107 (Options decision log and method page)
+status: BACKLOG
 owner: frontend
 branch: agent/frontend
 priority: HIGH
@@ -13,6 +13,8 @@ blocked_on: ""
 # TASK-105 — Options decision log and method page
 
 ## Objective
+
+**Superseded.** The owner replaced this UI with the Dispatch mockup (ADR-007). Do not build this. See TASK-107.
 
 Build the response comparison for a selected shipment (the Nutrition Facts
 reference), the decision action with override reason, the supervisor update, the

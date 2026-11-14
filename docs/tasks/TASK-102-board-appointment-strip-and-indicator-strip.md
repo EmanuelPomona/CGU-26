@@ -1,7 +1,7 @@
 ---
 id: TASK-102
-title: Board appointment strip and indicator strip
-status: READY
+title: SUPERSEDED by TASK-107 (Board appointment strip and indicator strip)
+status: BACKLOG
 owner: frontend
 branch: agent/frontend
 priority: HIGH
@@ -13,6 +13,8 @@ blocked_on: ""
 # TASK-102 — Board appointment strip and indicator strip
 
 ## Objective
+
+**Superseded.** The owner replaced this UI with the Dispatch mockup (ADR-007). Do not build this. See TASK-107.
 
 Build the shipment board (the departures-board reference), the appointment strip
 (the signature element), and the indicator strip comparing normal, changed and

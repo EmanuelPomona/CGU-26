@@ -1,6 +1,6 @@
 ---
 id: TASK-106
-title: Priority weights clock and feed scout
+title: SUPERSEDED by TASK-107 (Priority weights clock and feed scout)
 status: BACKLOG
 owner: frontend
 branch: agent/frontend
@@ -13,6 +13,8 @@ blocked_on: ""
 # TASK-106 — Priority weights clock and feed scout
 
 ## Objective
+
+**Superseded.** The owner replaced this UI with the Dispatch mockup (ADR-007). Do not build this. See TASK-107.
 
 Nice-to-have controls, only after TASK-101..105 are in REVIEW: priority weights
 and dispatch clock (`PUT /api/settings`), and a scout panel listing
