@@ -8,10 +8,10 @@ the per-task criteria in `docs/tasks/`. IDs are stable; quote them in handoffs.
 ## Product
 
 - [ ] **P-1** The primary demo flow in `docs/PRODUCT.md` completes end to end in one browser session without reloading.
-- [ ] **P-2** With no disruptions, every shipment's `normal`, `changed` and `current` evaluations are identical and the indicator strip shows no difference.
+- [ ] **P-2** With no disruptions, every shipment's `normal`, `changed` and `current` evaluations are identical and the normal vs changed comparison shows no difference.
 - [ ] **P-3** After the `close60` preset is added and confirmed, at least two indicators differ between normal and changed, and both differences are visible without opening any panel.
 - [ ] **P-4** Dismissing a disruption returns every indicator to its normal value while the disruption stays listed as dismissed.
-- [ ] **P-5** After a decision on an at-risk shipment, the indicator strip shows normal, changed and decided values, and the decision is in the log with its supervisor update.
+- [ ] **P-5** After a decision on an at-risk shipment, the comparison shows normal, changed and decided values, and the decision is in the log with its supervisor update.
 
 ## Organizer requirements (GeoAI brief)
 
@@ -20,7 +20,7 @@ the per-task criteria in `docs/tasks/`. IDs are stable; quote them in handoffs.
 - [ ] **G-3** Environmental responsibility is demonstrated: every option shows added miles and estimated CO2.
 - [ ] **G-4** Fairness and stakeholder impact is demonstrated: every option lists who bears a burden (driver, residents, warehouse, other customer), and the community score counts sensitive places near the route.
 - [ ] **G-5** Human oversight is demonstrated: nothing changes a plan without a dispatcher click; a non-suggested option can be chosen with a recorded reason; a decision can be undone.
-- [ ] **G-6** Transparency and responsible data: every simulated or estimated figure is labeled; unverified disruptions are visually distinct on map and board; no personal data appears.
+- [ ] **G-6** Transparency and responsible data: every simulated or estimated figure is labeled; unverified disruptions are visually distinct on the map and in the To dispatch view; no personal data appears.
 - [ ] **G-7** The interface nowhere describes the rule-based scoring as AI, a trained model, or optimal.
 
 ## Frontend functionality (Dispatch UI, ADR-007)
