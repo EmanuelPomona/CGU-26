@@ -1,7 +1,7 @@
 # STATUS: agent/backend
-Task: TASK-001, TASK-002 (implemented) -> next TASK-003
+Task: TASK-001..004 implemented; code review in progress
 Round: 0
-Last updated: 2026-11-14T12:20:00-08:00
+Last updated: 2026-11-14T12:05:00-08:00
 
 ## Skills invoked so far
 - ecc:backend-patterns @ TASK-001 start -> layered design: thin routers, pure engine, one in-memory Store; one centralized error handler
@@ -9,6 +9,8 @@ Last updated: 2026-11-14T12:20:00-08:00
 - ecc:error-handling @ before errors.py -> one ApiError(status, code, message, field); handlers for request validation (422 + field), unknown path (404 not_found), unhandled (logged, generic 500)
 - ecc:fastapi-patterns @ before main.py -> create_app() factory, pydantic v2 request schemas, TestClient on the factory; no response_model (would duplicate openapi.yaml; contract tests validate instead)
 - superpowers:test-driven-development @ before geo.py / evaluate.py -> tests written first and seen red (ImportError) before each module; hand-computed expectations
+- ecc:security-review @ before TASK-003 disruptions router -> allow-list referenced ids (shipment/warehouse/trucks) against seed, bounded strings, generic 500, localhost-only CORS
+- superpowers:requesting-code-review @ after TASK-004 + schemathesis fixes (HEAD 273d7ab) -> reviewer subagent dispatched on 54afc1c..273d7ab
 - ecc:api-design: NOT invoked — the API is fully designed by the manager in docs/openapi.yaml; backend designs no new API surface
 
 ## Done
@@ -19,12 +21,18 @@ Last updated: 2026-11-14T12:20:00-08:00
 - [x] evaluation engine, 30 tests -> c1a78b6
 - [x] board/settings/reset -> 7094397 (65 tests pass)
 
+- [x] TASK-003 disruptions -> d452dfc
+- [x] TASK-004 options/scoring -> 4aca92f; decisions/supervisor update/undo -> 3184673
+- [x] offline demo flow test (B-5) -> 39e6707
+- [x] schemathesis findings fixed (400->422, explicit null 422, 405 Allow) -> 273d7ab
+
 ## In progress
-- [ ] TASK-003 disruptions router (next: write tests/test_disruptions.py first)
+- [ ] code review subagent running; then handoff, then verification-before-completion
 
 ## Verified
 - seed day at 08:00: 6 on_time, 1 tight (C-105, slack 14), 0 at_risk -> python print in session
-- `python3 -m pytest -q` -> 65 passed
+- `python3 -m pytest -q` -> 131 passed (at 273d7ab)
+- schemathesis 4.33.4 (scratch venv) vs live 8012: 717 cases, only 3 ST202 left = documented semantic rules (kind companions, override reason, all-zero weights)
 - live service on 8012 answers /api/board with 7 shipments
 
 ## Blocked on
