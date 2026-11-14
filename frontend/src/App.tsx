@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getNetwork, usingMock } from './api/client';
 import type { Area, Network, Route } from './api/types';
 import { useBoard } from './api/useBoard';
-import { Board } from './components/Board';
+import { Board, BoardSkeleton } from './components/Board';
 import { Conditions, type PlaceDraft } from './components/Conditions';
 import { IndicatorStrip } from './components/IndicatorStrip';
 import { MapView } from './components/MapView';
@@ -233,10 +233,18 @@ function ShellFirstLoad({
 }) {
   if (loading) {
     return (
-      <div className="shell-state" role="status" aria-live="polite">
-        <h2>Loading the board</h2>
-        <p>Fetching shipments, appointments and conditions.</p>
-      </div>
+      <>
+        <aside className="region-cond" aria-label="Conditions" />
+        <section className="region-ind" aria-label="Indicators" />
+        <section className="region-map" aria-label="Map" />
+        <main className="region-board" aria-label="Shipments">
+          <p className="visually-hidden" role="status">
+            Loading the board.
+          </p>
+          <BoardSkeleton />
+        </main>
+        <section className="region-detail" aria-label="Responses" />
+      </>
     );
   }
   return (

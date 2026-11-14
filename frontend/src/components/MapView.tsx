@@ -7,6 +7,7 @@ import type { Area, Board, Disruption, Network, Route, SensitivePlace } from '..
 import {
   COLORS, disruptionStyle, iconHtml, nearRoute, routeStyle, SOURCE_WORD, VERIFICATION_WORD,
 } from '../lib/mapStyle';
+import { useMedia } from '../lib/useMedia';
 import './MapView.css';
 
 interface Props {
@@ -283,8 +284,9 @@ export function MapView(props: Props) {
 }
 
 function Legend({ showPlaces, onTogglePlaces }: { showPlaces: boolean; onTogglePlaces: () => void }) {
+  const wide = useMedia('(min-width: 1181px)');
   return (
-    <details className="legend" open>
+    <details className="legend" open={wide || undefined} key={wide ? 'wide' : 'narrow'}>
       <summary>Legend</summary>
       <ul>
         <li>

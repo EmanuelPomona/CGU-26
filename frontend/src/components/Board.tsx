@@ -150,3 +150,34 @@ function Row({
     </div>
   );
 }
+
+/** Loading rows at the final column widths, so the layout does not move when data arrives. */
+export function BoardSkeleton() {
+  const w = ['70%', '80%', '75%', '60%', '85%', '70%', '100%', '80%'];
+  return (
+    <div className="board" aria-busy="true">
+      <div className="board-title">
+        <h2>Shipments today</h2>
+        <p>Loading</p>
+      </div>
+      <div className="board-grid" role="grid" aria-label="Shipments, loading">
+        <div className="board-row board-head" role="row">
+          {['Container', 'Cargo', 'From, to', 'Truck', 'Window', 'Arrival', '', 'Status'].map((h, i) => (
+            <span key={i} role="columnheader" className={i === 7 ? 'col-status' : undefined}>
+              {h}
+            </span>
+          ))}
+        </div>
+        {Array.from({ length: 7 }, (_, r) => (
+          <div key={r} className="board-row board-row-skel" role="row">
+            {w.map((width, c) => (
+              <span key={c} role="gridcell" className={c === 7 ? 'col-status' : undefined}>
+                <span className="skel" style={{ width }} />
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
