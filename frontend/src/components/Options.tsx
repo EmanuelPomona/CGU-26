@@ -103,7 +103,7 @@ export function Options({ board, row, scale, apply, setBoard, onPreview, sheet, 
     } catch (e) {
       const err = e instanceof ApiError ? e : null;
       if (err?.status === 409) {
-        setNotice('Conditions changed since these options were listed. They have been reloaded.');
+        setNotice(`${err.message} Options have been reloaded.`);
         setReasonFor(null);
         void fetchOptions(row.id);
       } else if (err?.status === 422 && err.field === 'reason') {
