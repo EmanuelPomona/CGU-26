@@ -1,7 +1,7 @@
 # STATUS: agent/frontend
-Task: TASK-101 (then 102, 103, 104, 105)
+Task: TASK-107 (TASK-102..106 superseded, ADR-007)
 Round: 1
-Last updated: 2026-11-14T12:05-08:00
+Last updated: 2026-11-14T12:40-08:00
 
 ## Skills invoked so far
 - ecc:frontend-design-direction @ before shell styling (TASK-101) -> tone industrial-utilitarian dense/ruled; first screen is the tool; only motion = ETA tick sliding to new position
@@ -33,6 +33,8 @@ Last updated: 2026-11-14T12:05-08:00
 - [x] F-2 verified by stopping and restarting the private backend (F-06, F-07)
 
 ## In progress
+- [x] Owner replaced UI twice; final: Dispatch mockup port (5a5c776), wired to API in TASK-107
+- [x] TASK-107 wired views on backend c30496a copy (:8001); close60 flow walked by hand; gates pass; HANDOFF-2 written
 - [ ] ecc:browser-qa, superpowers:requesting-code-review, final gates, handoff, verification-before-completion
 
 ## Deviations / decisions
