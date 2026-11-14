@@ -258,6 +258,81 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/FeedCandidates' }
 
+  /api/studio/session:
+    post:
+      summary: Start a Route studio OD session from a truck to a destination
+      operationId: createStudioSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StudioSessionCreate' }
+      responses:
+        '200':
+          description: session with baseline and three alternatives
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StudioSession' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /api/studio/session/{session_id}:
+    get:
+      summary: Fetch a Route studio session
+      operationId: getStudioSession
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StudioSession' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/studio/session/{session_id}/obstacles:
+    post:
+      summary: Add an obstacle and recompute three alternatives
+      operationId: addStudioObstacle
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StudioObstacleCreate' }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StudioSession' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /api/studio/session/{session_id}/obstacles/{obstacle_id}:
+    delete:
+      summary: Remove a studio obstacle and recompute
+      operationId: deleteStudioObstacle
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: obstacle_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StudioSession' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
 components:
   responses:
     ValidationError:
@@ -740,3 +815,70 @@ components:
       properties:
         sources:    { type: array, items: { $ref: '#/components/schemas/FeedSource' } }
         candidates: { type: array, items: { $ref: '#/components/schemas/FeedCandidate' } }
+
+    # ---------- route studio ----------
+    StudioSessionCreate:
+      type: object
+      required: [truck_id, destination]
+      properties:
+        truck_id: { type: string }
+        destination:
+          type: object
+          required: [lat, lng]
+          properties:
+            lat: { type: number }
+            lng: { type: number }
+    StudioObstacleCreate:
+      type: object
+      required: [type, lat, lng]
+      properties:
+        type: { type: string, enum: [road_closure, wildfire, flood, traffic] }
+        lat: { type: number }
+        lng: { type: number }
+    StudioMetrics:
+      type: object
+      required: [eta_min, distance_km, co2_kg, obstacle_exposure, local_street_km]
+      properties:
+        eta_min: { type: number }
+        distance_km: { type: number }
+        co2_kg: { type: number }
+        obstacle_exposure: { type: number }
+        local_street_km: { type: number }
+    StudioAlternative:
+      type: object
+      required: [id, slot, algorithm, label, feasible, summary, pros, cons, metrics, geometry, node_ids]
+      properties:
+        id: { type: string }
+        slot: { type: string, enum: [fastest, direct, avoid] }
+        algorithm: { type: string }
+        label: { type: string }
+        feasible: { type: boolean }
+        infeasible_reason: { type: [string, 'null'] }
+        summary: { type: string }
+        pros: { type: array, items: { type: string } }
+        cons: { type: array, items: { type: string } }
+        metrics: { $ref: '#/components/schemas/StudioMetrics' }
+        geometry: { type: array, items: { type: array, items: { type: number } } }
+        node_ids: { type: array, items: { type: string } }
+    StudioObstacle:
+      type: object
+      required: [id, type, label, lat, lng, radius_km, confidence]
+      properties:
+        id: { type: string }
+        type: { type: string }
+        label: { type: string }
+        lat: { type: number }
+        lng: { type: number }
+        radius_km: { type: number }
+        confidence: { type: number }
+    StudioSession:
+      type: object
+      required: [id, truck_id, origin, destination, baseline, alternatives, obstacles]
+      properties:
+        id: { type: string }
+        truck_id: { type: string }
+        origin: { type: object, additionalProperties: true }
+        destination: { type: object, additionalProperties: true }
+        baseline: { $ref: '#/components/schemas/StudioAlternative' }
+        alternatives: { type: array, items: { $ref: '#/components/schemas/StudioAlternative' }, minItems: 3, maxItems: 3 }
+        obstacles: { type: array, items: { $ref: '#/components/schemas/StudioObstacle' } }

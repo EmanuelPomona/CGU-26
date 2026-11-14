@@ -258,3 +258,13 @@ PATCH /api/disruptions/D-1   { "verification": "dismissed", "note": "Caltrans sa
 ```
 
 The affected ids above are an illustration; the real ones come from the engine.
+
+---
+
+# Route studio
+
+Additive mode for interactive OD routing (see `docs/superpowers/plans/2026-11-14-interactive-reroute-studio.md`).
+
+- `POST /api/studio/session` with `{ truck_id, destination: { lat, lng } }` snaps the truck and destination onto the bundled road graph and returns three alternatives (Fastest / Direct / Avoid hazards).
+- `POST /api/studio/session/{id}/obstacles` with `{ type, lat, lng }` snaps onto a graph edge (2 km) and recomputes all three.
+- Algorithms: Dijkstra on travel time, A* on road distance, obstacle-penalized Dijkstra. Tradeoff `pros` / `cons` are server templates.
