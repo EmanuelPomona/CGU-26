@@ -1,7 +1,7 @@
 # STATUS: agent/reviewer
 Task: unassigned (no task in REVIEW; manager instructed stand-by)
 Round: 0
-Last updated: 2026-11-14T19:35:00Z
+Last updated: 2026-11-14T19:40:00Z
 
 ## Skills invoked so far
 - none yet. Review-stage skills (ecc:browser-qa, frontend-design:frontend-design,
@@ -42,6 +42,13 @@ Last updated: 2026-11-14T19:35:00Z
 - Frontend must use tight #985F0E and ghost #7C848C (brief at main 0ec5ef9);
   grep frontend/ for #A8690F / #9AA1A8. Ghost tick must be visibly shorter
   than the live tick (second cue, not color alone).
+- Runtime isolation (manager, 19:40): review against MY OWN backend on
+  BACKEND_PORT=8003 / FRONTEND_PORT=3003 (.env). Never touch 8012 (backend
+  worker's shared in-memory board) or 8002 (unrelated app answering
+  /api/health). Checked 19:40: 8003/3003 free; 8002 and 8012 held by other
+  Python processes. This session has made no requests to any port.
+  At review start, confirm /api/health on 8003 is MY process (lsof pid) before
+  trusting any response.
 - Manager says none of the unregistered skills apply and frontend was told
   not to claim them; still audit.
 - F-4: confirm frontend/src/api types are generated (openapi-typescript), not handwritten.
