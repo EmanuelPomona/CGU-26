@@ -189,7 +189,7 @@ export default function App() {
 
           <main className="region-board" aria-label="Shipments">
             {narrow && verify}
-            <Board board={board} scale={scale} selectedId={selectedId} onSelect={select} />
+            <Board board={board} network={network} scale={scale} selectedId={selectedId} onSelect={select} />
           </main>
 
           <section
