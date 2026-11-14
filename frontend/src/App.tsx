@@ -1,34 +1,33 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getNetwork, usingMock } from './api/client';
-import type { Area, Network, Route } from './api/types';
+// Layout and interaction follow docs/reference/sample-prototype.html (owner's direction, 2026-11-14).
+// Every number still comes from the backend through the generated API client.
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ApiError, createDisruption, getNetwork, getOptions, usingMock } from './api/client';
+import type { Network, OptionsResponse } from './api/types';
 import { useBoard } from './api/useBoard';
-import { Board, BoardSkeleton } from './components/Board';
-import { Conditions, type PlaceDraft } from './components/Conditions';
-import { IndicatorStrip } from './components/IndicatorStrip';
-import { MapView } from './components/MapView';
-import { Method } from './components/Method';
-import { Options } from './components/Options';
-import { VerifyPrompt } from './components/VerifyPrompt';
+import { drawBody, PrioritiesPane, ScenarioPane, ScoutPane, type DrawDraft } from './components/proto/LeftPanes';
+import { ProtoMap, type View } from './components/proto/ProtoMap';
+import { ComparePane, MethodPane, ShipmentsPane } from './components/proto/RightPanes';
 import { clock } from './lib/format';
-import { stripScale } from './lib/strip';
-import { useMedia } from './lib/useMedia';
 
-type Panel = 'none' | 'cond' | 'detail';
+type LeftTab = 'scn' | 'scout' | 'wts';
+type RightTab = 'ord' | 'cmp' | 'notes';
 
 export default function App() {
   const bs = useBoard();
   const { board } = bs;
   const [network, setNetwork] = useState<Network | null>(null);
+  const [view, setView] = useState<View>('normal');
+  const [left, setLeft] = useState<LeftTab>('scn');
+  const [right, setRight] = useState<RightTab>('ord');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [view, setView] = useState<'board' | 'method'>('board');
-  const [panel, setPanel] = useState<Panel>('none');
-  const [placing, setPlacing] = useState<PlaceDraft | null>(null);
-  const [placed, setPlaced] = useState<Area | null>(null);
-  const [preview, setPreview] = useState<Route | null>(null);
-  const [mapExpanded, setMapExpanded] = useState(false);
-  const narrow = useMedia('(max-width: 1180px)');
-  const mobile = useMedia('(max-width: 640px)');
-  const lastRowFocus = useRef<string | null>(null);
+  const [options, setOptions] = useState<OptionsResponse | null>(null);
+  const [optionsError, setOptionsError] = useState<string | null>(null);
+  const [draft, setDraft] = useState<DrawDraft>({ kind: 'slowdown', radius_km: 3, slowdown_factor: 2.2, confidence: 0.7 });
+  const [placing, setPlacing] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [showPlaces, setShowPlaces] = useState(true);
+  const [showTrucks, setShowTrucks] = useState(true);
+  const optSeq = useRef(0);
 
   useEffect(() => {
     let live = true;
@@ -42,226 +41,158 @@ export default function App() {
     };
   }, []);
 
-  // When the board comes back after an outage, the network may still be missing.
+  // Select the first shipment once the board arrives, as the prototype does.
   useEffect(() => {
-    if (board && !network) getNetwork().then(setNetwork).catch(() => undefined);
-  }, [board, network]);
+    if (board && !selectedId) setSelectedId(board.shipments[0]?.id ?? null);
+  }, [board, selectedId]);
 
-  const scale = useMemo(() => stripScale(board?.shipments ?? []), [board]);
-  const selected = board?.shipments.find((s) => s.id === selectedId) ?? null;
-
-  const select = useCallback(
-    (id: string | null) => {
-      setSelectedId(id);
-      setPreview(null);
-      if (id) {
-        lastRowFocus.current = id;
-        if (narrow) setPanel('detail');
-      }
-    },
-    [narrow],
-  );
-
-  const closePanel = useCallback(() => {
-    const was = panel;
-    setPanel('none');
-    if (was === 'detail' && lastRowFocus.current) {
-      const id = lastRowFocus.current;
-      requestAnimationFrame(() =>
-        document.querySelector<HTMLElement>(`[data-row-id="${CSS.escape(id)}"]`)?.focus(),
-      );
+  const loadOptions = useCallback(async (id: string) => {
+    const n = ++optSeq.current;
+    setOptionsError(null);
+    try {
+      const o = await getOptions(id);
+      if (n === optSeq.current) setOptions(o);
+    } catch (e) {
+      if (n === optSeq.current) setOptionsError(e instanceof ApiError ? e.message : 'Options could not be loaded.');
     }
-  }, [panel]);
+  }, []);
 
+  // Options follow the selection and every board change.
   useEffect(() => {
-    if (panel === 'none') return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && closePanel();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [panel, closePanel]);
+    if (selectedId && board) void loadOptions(selectedId);
+  }, [selectedId, board, loadOptions]);
 
-  const startPlacing = (d: PlaceDraft | null) => {
-    setPlacing(d);
-    setPlaced(null);
-    if (d && narrow) {
-      setPanel('none');
-      setMapExpanded(true);
+  const toDisruptionView = useCallback(() => setView('changed'), []);
+
+  const onPlace = async (at: { lat: number; lng: number }) => {
+    setPlacing(false);
+    try {
+      await bs.apply(() => createDisruption(drawBody(draft, at)));
+      setView('changed');
+    } catch (e) {
+      setToast(e instanceof ApiError ? e.message : 'Could not add the condition.');
+      setTimeout(() => setToast(null), 3500);
     }
   };
 
-  const onMapPlace = (latlng: { lat: number; lng: number }) => {
-    if (!placing) return;
-    setPlaced({ lat: latlng.lat, lng: latlng.lng, radius_km: placing.radius_km });
-    if (narrow) setPanel('cond');
-  };
-
-  const active = board?.disruptions.filter((d) => d.verification !== 'dismissed') ?? [];
-  const pending = board?.pending_verification_ids.length ?? 0;
-  const scenario =
-    active.length === 0
-      ? 'Normal day'
-      : `${active.length} changed condition${active.length === 1 ? '' : 's'}${pending ? `, ${pending} unverified` : ''}`;
-
-  const verify = board && pending > 0 ? <VerifyPrompt board={board} apply={bs.apply} /> : null;
+  const active = board?.disruptions.filter((d) => d.verification !== 'dismissed').length ?? 0;
 
   return (
-    <div className="shell">
-      <header className="region-head">
-        <h1 className="wordmark">Drayline</h1>
-        <p className="head-meta">
-          <span>
-            Dispatch clock <strong className="mono">{board ? clock(board.settings.clock_min) : '8:00 AM'}</strong>
-          </span>
-          <span className={active.length ? 'head-scenario-changed' : undefined} role="status" aria-live="polite">
-            {scenario}
-          </span>
-          {usingMock && <span>Mock data</span>}
-        </p>
-        <nav className="head-nav" aria-label="Views">
-          <button
-            type="button"
-            className="btn head-narrow-only"
-            aria-expanded={panel === 'cond'}
-            onClick={() => setPanel(panel === 'cond' ? 'none' : 'cond')}
-          >
-            Conditions{active.length ? ` (${active.length})` : ''}
+    <div className="app">
+      <header className="top">
+        <h1>SoCal Port → Warehouse · Decision Support</h1>
+        <div className="seg" role="group" aria-label="Which day to show">
+          <button className={view === 'normal' ? 'on' : ''} aria-pressed={view === 'normal'} onClick={() => setView('normal')}>
+            Normal day
           </button>
-          <button type="button" className="btn" aria-pressed={view === 'board'} onClick={() => setView('board')}>
-            Board
+          <button className={view === 'changed' ? 'on' : ''} aria-pressed={view === 'changed'} onClick={() => setView('changed')}>
+            Disruption{active ? ` (${active})` : ''}
           </button>
-          <button type="button" className="btn" aria-pressed={view === 'method'} onClick={() => { setPlacing(null); setView('method'); }}>
-            Method
-          </button>
-        </nav>
+        </div>
+        {usingMock && <span className="mock-tag">mock data</span>}
+        <span className="clock-lbl">
+          Dispatch clock {board ? clock(board.settings.clock_min) : '8:00 AM'} · {view === 'changed' ? 'disruption view' : 'normal day'}
+        </span>
       </header>
-
+      <div className="banner">
+        <b>Simulated data:</b> containers, trucks, capacities, costs and emissions are synthetic estimates, not measurements. A reported hazard is not proof a road is blocked: the dispatcher decides.
+      </div>
       {bs.error && board && (
-        <div className="conn-banner" role="alert" style={{ gridColumn: '1 / -1' }}>
-          <span>Lost connection to the server. Showing the last board received.</span>
-          <button type="button" className="btn" onClick={bs.retry}>
-            Retry
-          </button>
+        <div className="conn" role="alert">
+          Lost connection to the server. Showing the last board received.
+          <button className="b" onClick={bs.retry}>Retry</button>
         </div>
       )}
 
-      {view === 'method' ? (
-        <main className="shell-method" style={{ gridColumn: '1 / -1', gridRow: '2 / -1', overflowY: 'auto' }}>
-          <Method />
-        </main>
-      ) : !board ? (
-        <ShellFirstLoad loading={bs.loading} error={bs.error} retry={bs.retry} />
+      {!board ? (
+        <div className="center-state" role={bs.loading ? 'status' : 'alert'}>
+          {bs.loading ? (
+            <span className="mute">Loading shipments and routes…</span>
+          ) : (
+            <>
+              <b>The board could not be loaded.</b>
+              <span className="mute">
+                {bs.error?.status === 0 ? 'The server is not responding. Check that it is running, then retry.' : bs.error?.message}
+              </span>
+              <span>
+                <button className="b pri" onClick={bs.retry}>Retry</button>
+              </span>
+            </>
+          )}
+        </div>
       ) : (
-        <>
-          <aside className="region-cond" aria-label="Conditions" data-open={panel === 'cond'}>
-            <div className="panel-close">
-              <h2>Conditions</h2>
-              <button type="button" className="btn" onClick={closePanel}>
-                Close
-              </button>
+        <main className="cols">
+          <aside className="side left" aria-label="Scenario and priorities">
+            <div className="tabs" role="tablist">
+              {([['scn', 'Scenario'], ['scout', 'Live scout'], ['wts', 'Priorities']] as const).map(([k, l]) => (
+                <button key={k} role="tab" aria-selected={left === k} className={left === k ? 'on' : ''} onClick={() => setLeft(k)}>
+                  {l}
+                </button>
+              ))}
             </div>
-            {!narrow && verify}
-            <Conditions
-              board={board}
-              network={network}
-              apply={bs.apply}
-              placing={placing}
-              placed={placed}
-              onPlacing={startPlacing}
-            />
+            {left === 'scn' && (
+              <ScenarioPane
+                board={board}
+                apply={bs.apply}
+                onChanged={toDisruptionView}
+                draft={draft}
+                setDraft={setDraft}
+                placing={placing}
+                setPlacing={setPlacing}
+                showPlaces={showPlaces}
+                setShowPlaces={setShowPlaces}
+                showTrucks={showTrucks}
+                setShowTrucks={setShowTrucks}
+              />
+            )}
+            {left === 'scout' && <ScoutPane apply={bs.apply} onChanged={toDisruptionView} />}
+            {left === 'wts' && <PrioritiesPane board={board} apply={bs.apply} />}
           </aside>
 
-          <section className="region-ind" aria-label="Indicators">
-            <IndicatorStrip indicators={board.indicators} hasDecisions={board.decisions.length > 0} />
-          </section>
-
-          <section className="region-map" aria-label="Map" data-expanded={mapExpanded}>
-            <MapView
+          <div className={`mapwrap ${placing ? 'placing' : ''}`}>
+            {placing && <div className="maptoast">Click the map to place the condition</div>}
+            {toast && <div className="maptoast">{toast}</div>}
+            <ProtoMap
               board={board}
               network={network}
+              view={view}
               selectedId={selectedId}
-              onSelect={select}
-              preview={preview}
-              placing={placing ? { radius_km: placing.radius_km } : null}
-              placed={placed}
-              onPlace={onMapPlace}
-              collapsed={mobile && !mapExpanded}
-              onToggleCollapsed={mobile ? () => setMapExpanded((x) => !x) : undefined}
+              onSelect={setSelectedId}
+              options={options}
+              showPlaces={showPlaces}
+              showTrucks={showTrucks}
+              placing={placing}
+              onPlace={onPlace}
             />
-          </section>
+          </div>
 
-          <main className="region-board" aria-label="Shipments">
-            {narrow && verify}
-            <Board board={board} network={network} scale={scale} selectedId={selectedId} onSelect={select} />
-          </main>
-
-          <section
-            className="region-detail"
-            aria-label={selected ? `Responses for ${selected.id}` : 'Responses'}
-            data-open={panel === 'detail'}
-            role={narrow && panel === 'detail' ? 'dialog' : undefined}
-            aria-modal={narrow && panel === 'detail' ? true : undefined}
-          >
-            <div className="panel-close">
-              <h2>{selected ? `Responses for ${selected.id}` : 'Responses'}</h2>
-              <button type="button" className="btn" onClick={closePanel} data-autofocus>
-                Close
-              </button>
+          <aside className="side right" aria-label="Shipments and comparison">
+            <div className="tabs" role="tablist">
+              {([['ord', 'Shipments'], ['cmp', 'Compare'], ['notes', 'Method']] as const).map(([k, l]) => (
+                <button key={k} role="tab" aria-selected={right === k} className={right === k ? 'on' : ''} onClick={() => setRight(k)}>
+                  {l}
+                </button>
+              ))}
             </div>
-            <Options
-              board={board}
-              row={selected}
-              scale={scale}
-              apply={bs.apply}
-              setBoard={bs.set}
-              onPreview={setPreview}
-              sheet={narrow}
-              open={!narrow || panel === 'detail'}
-            />
-          </section>
-        </>
-      )}
-    </div>
-  );
-}
-
-function ShellFirstLoad({
-  loading,
-  error,
-  retry,
-}: {
-  loading: boolean;
-  error: ReturnType<typeof useBoard>['error'];
-  retry: () => void;
-}) {
-  if (loading) {
-    return (
-      <>
-        <aside className="region-cond" aria-label="Conditions" />
-        <section className="region-ind" aria-label="Indicators" />
-        <section className="region-map" aria-label="Map" />
-        <main className="region-board" aria-label="Shipments">
-          <p className="visually-hidden" role="status">
-            Loading the board.
-          </p>
-          <BoardSkeleton />
+            {right === 'ord' && (
+              <ShipmentsPane
+                board={board}
+                view={view}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                options={options}
+                optionsError={optionsError}
+                reloadOptions={() => selectedId && void loadOptions(selectedId)}
+                apply={bs.apply}
+                setBoard={bs.set}
+                onDecided={toDisruptionView}
+              />
+            )}
+            {right === 'cmp' && <ComparePane board={board} />}
+            {right === 'notes' && <MethodPane />}
+          </aside>
         </main>
-        <section className="region-detail" aria-label="Responses" />
-      </>
-    );
-  }
-  return (
-    <div className="shell-state" role="alert">
-      <h2>The board could not be loaded</h2>
-      <p>
-        {error?.status === 0
-          ? 'The Drayline server is not responding. Check that it is running, then retry.'
-          : (error?.message ?? 'Unexpected error.')}
-      </p>
-      <p>
-        <button type="button" className="btn btn-primary" onClick={retry}>
-          Retry
-        </button>
-      </p>
+      )}
     </div>
   );
 }
