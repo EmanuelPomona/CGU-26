@@ -172,3 +172,20 @@ h4:first-child{margin-top:0}
 .leaflet-popup-content .seg3 button{font-family:var(--sans)}
 .pop .note{width:100%;border:1px solid var(--ink);border-radius:5px;padding:.3rem .5rem;font:inherit}
 .acc-h:focus-visible,.pick button:focus-visible,.btn:focus-visible,.nav button:focus-visible{outline:2px solid #4c8dff;outline-offset:2px}
+
+/* TASK-107 additions, in the mockup's vocabulary */
+.cmpbox{border:1px solid var(--ink);border-radius:8px;padding:.7rem .9rem;margin:.8rem 0;background:#fff}
+.cmpbox h4{margin:0 0 .4rem}
+.cmpbox table{width:100%;border-collapse:collapse}
+.cmpbox th,.cmpbox td{padding:.25rem 0;border-bottom:1px solid var(--line);text-align:right;font:400 .9rem var(--mono)}
+.cmpbox th:first-child,.cmpbox td:first-child{text-align:left;font-family:var(--sans)}
+.cmpbox th{font:500 .72rem var(--mono);color:var(--mute);text-transform:uppercase}
+.cmpbox p{margin:.45rem 0 0}
+.cmpfloat{position:absolute;left:1rem;bottom:2rem;z-index:900;width:min(26rem,40vw);max-height:60%;overflow:auto}
+.dapp.work .cmpfloat{display:none}
+.loadstate{position:fixed;z-index:950;top:calc(var(--hh) + 1rem);left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--ink);border-radius:8px;padding:.9rem 1.2rem;display:flex;flex-direction:column;gap:.5rem;align-items:flex-start;max-width:30rem}
+.connbar{position:fixed;z-index:950;top:var(--hh);left:0;right:0;background:var(--bad);color:#fff;padding:.4rem 1.25rem;font-size:.95rem}
+.connbar .btn{margin-left:.6rem}
+.scripted{display:inline-block;border:1px dashed var(--ink);border-radius:4px;padding:.15rem .6rem;font:500 .78rem var(--mono);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.9rem}
+textarea.draft{width:100%;min-height:9rem;margin-top:.6rem;font:400 .9rem/1.4 var(--mono);border:1px solid var(--line);border-radius:6px;padding:.5rem;resize:vertical}
+.alert form,.alert label{display:block}
