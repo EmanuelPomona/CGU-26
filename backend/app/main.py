@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import errors
-from app.routers import board, feeds, network
+from app.routers import board, disruptions, feeds, network
 
 LOCAL_ORIGINS = r"^http://(localhost|127\.0\.0\.1)(:\d+)?$"
 
@@ -19,7 +19,7 @@ def create_app() -> FastAPI:
         allow_headers=["Content-Type"],
     )
     errors.install(app)
-    for r in (network.router, board.router, feeds.router):
+    for r in (network.router, board.router, disruptions.router, feeds.router):
         app.include_router(r, prefix="/api")
     return app
 
