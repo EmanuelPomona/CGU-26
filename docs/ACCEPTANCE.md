@@ -42,7 +42,7 @@ the per-task criteria in `docs/tasks/`. IDs are stable; quote them in handoffs.
 
 - [ ] **B-1** Implementation matches `docs/openapi.yaml`: a pytest validates each endpoint's response against its schema, and `scripts/contract-test.sh` passes.
 - [ ] **B-2** Invalid input is rejected with the documented `Error` shape, including FastAPI validation failures (422 with `field`).
-- [ ] **B-3** The engine has unit tests for: reverse cases of each disruption kind, each verification state, driver-hours infeasibility, reschedule search, status thresholds, and determinism (same input, same output).
+- [ ] **B-3** The engine has unit tests for: each disruption kind, each verification state, driver-hours infeasibility, reschedule search, status thresholds, and determinism (same input, same output).
 - [ ] **B-4** `POST /api/reset` returns a board equal to a fresh start.
 - [ ] **B-5** The backend starts and serves the full demo flow with no network access.
 

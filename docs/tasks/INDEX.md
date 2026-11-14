@@ -5,6 +5,16 @@ Do not edit by hand — edit the task files and regenerate.
 
 | ID | Status | Owner | Round | Title |
 |---|---|---|---|---|
-| — | — | — | — | _no tasks yet_ |
+| TASK-001 | READY | backend | 0 | Backend scaffold seed data and static endpoints |
+| TASK-002 | READY | backend | 0 | Evaluation engine board and settings |
+| TASK-003 | READY | backend | 0 | Disruption lifecycle and verification |
+| TASK-004 | READY | backend | 0 | Options scoring decisions and supervisor update |
+| TASK-101 | READY | frontend | 0 | Frontend scaffold tokens API client and app shell |
+| TASK-102 | READY | frontend | 0 | Board appointment strip and indicator strip |
+| TASK-103 | READY | frontend | 0 | Map view |
+| TASK-104 | READY | frontend | 0 | Conditions panel and verification prompt |
+| TASK-105 | READY | frontend | 0 | Options decision log and method page |
+| TASK-005 | BACKLOG | backend | 0 | Live feed candidates |
+| TASK-106 | BACKLOG | frontend | 0 | Priority weights clock and feed scout |
 
-**Counts:** none
+**Counts:** BACKLOG 2, READY 9
