@@ -1,21 +1,30 @@
-// React port of the owner-supplied dispatcher-ui.html mockup.
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { DispatchMap, type View } from './DispatchMap';
+// Dispatch: the owner's mockup (ADR-007). Map, To dispatch and Network run on the backend API; the On route
+// view is a scripted example. The browser never ranks options or computes a figure.
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
-  DISPATCH, GOOD, INK, BAD, NOW, OBJ, ONROUTE, PROB, ROADS0, ROLE, SN, WH,
-  clock, fatLbl, mets, summaryTags, winEnd,
-  type Road, type RoadState, type Role, type Tag,
-} from './data';
+  ApiError, createDecision, createDisruption, deleteDecision, deleteDisruption, getNetwork, getOptions, getPresets, updateDisruption,
+} from '../api/client';
+import type { Board, Decision, Disruption, Network, OptionsResponse, Preset, ResponseOption, ShipmentRow } from '../api/types';
+import { useBoard } from '../api/useBoard';
+import { DispatchMap, type Verdict, type View } from './DispatchMap';
+import { BAD, GOOD, INK, OBJ, ONROUTE, PROB, ROLE, ROLE_ORDER, fatLbl, type RoleKey, type Tag } from './data';
 import './dispatch.css';
 
-type MsgKind = 'me' | 'them' | 'ai' | 'sys';
-interface Msg {
-  kind: MsgKind;
-  html: string;
-  time?: string;
-  src?: string;
-}
+const SCRIPTED_LINE = 'Scripted explanation from the rule-based score.';
 const esc = (s: string) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
+const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'The request failed.');
+const clock = (m: number) => {
+  const h = Math.floor(m / 60) % 24;
+  return `${h % 12 || 12}:${String(Math.round(m) % 60).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+};
+const STATUS = { on_time: ['On time', 'ok'], tight: ['Tight', 'warn'], at_risk: ['At risk', 'bad'] } as const;
+const STAKE = { driver: 'Driver', residents: 'Residents', warehouse: 'Warehouse', other_customer: 'Other customer', company: 'Company' } as const;
+const SOURCE = { simulated: 'Simulated what-if', dispatcher: 'Entered by dispatcher', public_feed: 'Public feed' } as const;
+const VER = { unverified: 'Unverified', confirmed: 'Confirmed', dismissed: 'Road is open' } as const;
+const signed = (n: number, unit = '', d = 0) => {
+  const r = Number(Math.abs(n).toFixed(d));
+  return r === 0 ? 'same' : `${n > 0 ? '+' : '−'}${r.toFixed(d)}${unit}`;
+};
 
 /* ---------- small pieces ---------- */
 function Tags({ tags }: { tags: Tag[] }) {
@@ -30,37 +39,6 @@ function Tags({ tags }: { tags: Tag[] }) {
     </div>
   );
 }
-function Issues({ tags }: { tags: Tag[] }) {
-  const w = tags.filter((t) => t[2] !== 'ok');
-  return w.length ? (
-    <Tags tags={w} />
-  ) : (
-    <div className="flags">
-      <span className="tag ok">
-        <i>All clear</i>
-      </span>
-    </div>
-  );
-}
-const sg = (v: string) => (/^\+/.test(v) ? 'badc' : /^[−-]/.test(v) ? 'goodc' : '');
-const cm = (n: number) => (n >= 90 ? 'goodc' : n < 80 ? 'badc' : '');
-function Mx({ a, b, c, d, e, signed }: { a: string; b: string; c: string; d: string; e: string | number; signed?: boolean }) {
-  const cell = (label: string, v: string, cls: string) => (
-    <div>
-      <span>{label}</span>
-      <b className={cls}>{v}</b>
-    </div>
-  );
-  return (
-    <div className="mx">
-      {cell('Arrive', a, signed ? sg(a) : '')}
-      {cell('Miles', b, signed ? sg(b) : '')}
-      {cell('CO₂', c, signed ? sg(c) : '')}
-      {cell('Cost', d, signed ? sg(d) : '')}
-      {cell('Community', String(e), cm(Number(e)))}
-    </div>
-  );
-}
 function Acc({ open, sel, onToggle, head, children }: { open: boolean; sel: boolean; onToggle: () => void; head: ReactNode; children: ReactNode }) {
   return (
     <div className={`acc ${sel ? 'sel' : ''} ${open ? 'open' : ''}`}>
@@ -71,6 +49,24 @@ function Acc({ open, sel, onToggle, head, children }: { open: boolean; sel: bool
       {open && <div className="acc-b">{children}</div>}
     </div>
   );
+}
+function Mx({ cells }: { cells: Array<[string, string, string?]> }) {
+  return (
+    <div className="mx">
+      {cells.map(([label, v, cls]) => (
+        <div key={label}>
+          <span>{label}</span>
+          <b className={cls}>{v}</b>
+        </div>
+      ))}
+    </div>
+  );
+}
+interface Msg {
+  kind: 'me' | 'them' | 'ai' | 'sys';
+  html: string;
+  time?: string;
+  src?: string;
 }
 function Messages({ msgs }: { msgs: Msg[] }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -89,232 +85,420 @@ function Messages({ msgs }: { msgs: Msg[] }) {
     </div>
   );
 }
-function SendBox({ placeholder, onSend }: { placeholder: string; onSend: (t: string) => void }) {
-  const [v, setV] = useState('');
-  const go = () => {
-    if (v.trim()) onSend(v);
-    setV('');
-  };
+
+/** Normal vs changed vs decided, from board.indicators only. */
+function Compare({ board, compact }: { board: Board; compact?: boolean }) {
+  const active = board.disruptions.some((d) => d.verification !== 'dismissed');
+  if (!active && board.decisions.length === 0) return null;
+  const { normal: n, changed: c, decided: dd, checks } = board.indicators;
+  const hasDec = board.decisions.length > 0;
+  const rows: Array<[string, number, number, number, number]> = [
+    ['Shipments at risk', n.shipments_at_risk, c.shipments_at_risk, dd.shipments_at_risk, 0],
+    ['Late minutes', n.total_late_min, c.total_late_min, dd.total_late_min, 0],
+    ['Fleet miles', n.fleet_miles, c.fleet_miles, dd.fleet_miles, 0],
+    ['CO₂ kg (est.)', n.co2_kg, c.co2_kg, dd.co2_kg, 0],
+    ['Cost $ (est.)', n.cost_usd, c.cost_usd, dd.cost_usd, 0],
+  ];
   return (
-    <div className="send">
-      <input placeholder={placeholder} aria-label={placeholder} value={v} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go()} />
-      <button className="btn pri" onClick={go}>
-        Send
-      </button>
+    <div className={`cmpbox ${compact ? 'compact' : ''}`}>
+      <h4>Normal day vs changed</h4>
+      <table>
+        <thead>
+          <tr>
+            <th />
+            <th>Normal</th>
+            <th>Changed</th>
+            {hasDec && <th>Decided</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([label, a, b, d, dec]) => (
+            <tr key={label}>
+              <td>{label}</td>
+              <td>{a.toFixed(dec)}</td>
+              <td className={b > a ? 'badc' : b < a ? 'goodc' : ''}>{b.toFixed(dec)}</td>
+              {hasDec && <td className={d > a ? 'badc' : d < a ? 'goodc' : ''}>{d.toFixed(dec)}</td>}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {checks
+        .filter((k) => k.triggered)
+        .map((k) => (
+          <p key={k.id} className="small">
+            <b>{k.label}.</b> {k.detail}
+          </p>
+        ))}
+      <div className="src">All figures: rule-based estimates from simulated inputs.</div>
     </div>
   );
 }
 
-/* ---------- canned assistant answers (mock) ---------- */
-function routeAnswer(q: string, dId: string, role: Role): [string, string] {
-  const d = DISPATCH.find((x) => x.id === dId)!;
-  q = q.toLowerCase();
-  const m = mets(d, role);
-  const tags = summaryTags(d, role);
-  const base = mets(d, 'eff');
-  const rn = ROLE[role].n.toLowerCase();
-  if (/why|chosen|pick|decid|how/.test(q))
-    return [
-      `${ROLE[role].goal} For ${d.drv}: ${m.mi.toFixed(0)} mi, ${m.min} min of driving (${m.min - base.min >= 0 ? '+' : ''}${m.min - base.min} min vs. fastest), ${m.co2.toFixed(0)} kg CO₂ (est.), ${m.local.toFixed(1)} mi on local streets.`,
-      'OSM roads, Caltrans/CHP live, CO₂ estimate',
-    ];
-  if (/school|hospital|neighbo|communit|resident|home/.test(q))
-    return [`The ${rn} route passes ${m.sch} school zone${m.sch === 1 ? '' : 's'} within 250 m (${m.schLocal} on local streets) and ${m.local.toFixed(1)} mi of local streets. Names are hidden in this mockup.`, 'OpenStreetMap places (simulated)'];
-  if (/rain|weather|wet|storm|fog/.test(q)) return [`${tags[0][1]}.`, 'National Weather Service forecast'];
-  if (/later|leave|depart|earlier|wait/.test(q))
-    return [
-      `Peak traffic eases after about 9:30 AM. Leaving 20 min later saves roughly 4 min of driving and still arrives ${winEnd(d) - (NOW + 35 + 20 + m.min) >= 0 ? 'inside' : 'outside'} the window (${clock(winEnd(d))}).`,
-      'time-of-day traffic estimate',
-    ];
-  if (/traffic|incident|accident|crash|slow|closure|closed/.test(q)) return [`${tags[2][1]}. Your overrides on the map apply here too.`, 'Caltrans / CHP (live)'];
-  if (/co2|green|emission|carbon/.test(q)) return [`Estimated ${m.co2.toFixed(0)} kg CO₂ (${m.mi.toFixed(0)} mi × 1.75 kg/mi). A rough estimate, not a measurement.`, 'CO₂ estimate'];
-  return [`(Mock) I would answer “${esc(q)}” from road data, live incidents and weather for the ${rn} route.`, 'mock'];
-}
-
-function optionAnswer(q: string, probId: string, opt: number | null): [string, string] {
-  const p = PROB[probId];
-  const o = opt != null ? p.opts[opt] : null;
-  q = q.toLowerCase();
-  if (!o) return ['(Mock) Press “Ask AI about this” on an option first and I will answer from that option’s numbers and sources.', 'mock'];
-  if (/why|picked|chosen|decid/.test(q)) return [`Option ${opt! + 1} optimizes <b>${OBJ[o.obj].toLowerCase()}</b>. ${esc(o.s)} ${esc(o.why.join(' '))}`, `${esc(p.src)}, estimates`];
-  if (/school|neighbo|communit|resident/.test(q)) {
-    const k = o.tags.find((x) => x[0] === 'Schools');
-    return [`${esc(k ? k[1] : 'No school exposure listed')}. Community score ${o.comm}/100.`, 'OpenStreetMap places (simulated)'];
-  }
-  if (/rain|weather|wet/.test(q)) {
-    const r = o.tags.find((x) => x[0] === 'Rain' || x[0] === 'Weather');
-    return [r ? `${esc(r[1])}.` : 'No weather impact expected on this option.', 'National Weather Service forecast'];
-  }
-  if (/refus|won.?t|decline/.test(q)) return ['The driver can decline any option; nothing is final until they confirm in chat. The other two options remain available.', 'mock'];
-  if (/co2|emission|green/.test(q)) return [`Estimated change in CO₂: ${esc(o.co2)} (estimate, not measured).`, 'CO₂ estimate'];
-  return [`(Mock) I would answer “${esc(q)}” from the option’s data and live feeds.`, 'mock'];
+/** "Explain this option": assembled only from the server's text for that option. */
+function explain(o: ResponseOption, rationale: string): string[] {
+  const out: string[] = [];
+  if (o.suggested) out.push(rationale);
+  out.push(o.description);
+  out.push(o.evaluation.community_detail);
+  for (const b of o.burdens) out.push(`${STAKE[b.stakeholder]}: ${b.text}`);
+  out.push(...o.notes);
+  out.push(...o.evaluation.flags);
+  if (!o.feasible && o.infeasible_reason) out.push(o.infeasible_reason);
+  return out.filter(Boolean);
 }
 
 /* ---------- app ---------- */
 export default function DispatchApp() {
+  const bs = useBoard();
+  const { board } = bs;
+  const [network, setNetwork] = useState<Network | null>(null);
+  const [netError, setNetError] = useState<string | null>(null);
+  const [presets, setPresets] = useState<Preset[]>([]);
   const [view, setView] = useState<View>('map');
-  const [goId, setGoId] = useState('T-21');
-  const [goRole, setGoRole] = useState<Role>('eff');
-  const [goOpen, setGoOpen] = useState<Role | null>('eff');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [options, setOptions] = useState<OptionsResponse | null>(null);
+  const [optError, setOptError] = useState<string | null>(null);
+  const [focusRole, setFocusRole] = useState<RoleKey>('efficiency');
+  const [openKey, setOpenKey] = useState<string | null>('efficiency');
+  const [pickedId, setPickedId] = useState<string | null>(null);
+  const [reasonFor, setReasonFor] = useState<string | null>(null);
+  const [reason, setReason] = useState('');
+  const [reasonError, setReasonError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [explainId, setExplainId] = useState<string | null>(null);
   const [probId, setProbId] = useState('T-11');
-  const [probOpt, setProbOpt] = useState<number | null>(null);
   const [probOpen, setProbOpen] = useState<number | null>(null);
-  const [roads, setRoads] = useState<Road[]>(ROADS0);
+  const [probOpt, setProbOpt] = useState<number | null>(null);
+  const [sideTab, setSideTab] = useState<'chat' | 'explain'>('chat');
+  const [driverMsgs, setDriverMsgs] = useState<Record<string, Msg[]>>({});
   const [legendOpen, setLegendOpen] = useState(false);
   const [toastText, setToastText] = useState('');
+  const [copied, setCopied] = useState(false);
   const toastTimer = useRef<number | undefined>(undefined);
-  const [aiCtx, setAiCtx] = useState<Role | null>(null);
-  const [aiMsgs, setAiMsgs] = useState<Msg[]>([{ kind: 'ai', html: 'Three routes for each truck, and all three arrive in time for T-21. Open one, or press <b>Ask AI</b> to question it.' }]);
-  const [sideTab, setSideTab] = useState<'chat' | 'ai'>('chat');
-  const [driverMsgs, setDriverMsgs] = useState<Record<string, Msg[]>>({});
-  const [dAiMsgs, setDAiMsgs] = useState<Msg[]>([]);
+  const optSeq = useRef(0);
 
-  const toast = (t: string) => {
+  const toast = useCallback((t: string) => {
     setToastText(t);
     window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToastText(''), 2400);
-  };
+    toastTimer.current = window.setTimeout(() => setToastText(''), 2600);
+  }, []);
 
-  const d = DISPATCH.find((x) => x.id === goId)!;
-  const t = ONROUTE.find((x) => x.id === probId)!;
-  const p = PROB[probId];
-  const problems = ONROUTE.filter((x) => x.prob).length;
+  const loadStatic = useCallback(() => {
+    setNetError(null);
+    getNetwork().then(setNetwork).catch((e) => setNetError(msg(e)));
+    getPresets().then((r) => setPresets(r.presets)).catch((e) => setNetError(msg(e)));
+  }, []);
+  useEffect(loadStatic, [loadStatic]);
 
-  // Driver chat history: seeded from the mockup's transcript the first time a truck is opened.
-  const trMsgs: Msg[] = driverMsgs[probId] ?? p.chat.map(([kind, time, text]) => ({ kind, html: esc(text), time: `${time} AM` }));
-  const addDriverMsg = (m: Msg) => setDriverMsgs((all) => ({ ...all, [probId]: [...(all[probId] ?? trMsgs), m] }));
-
+  // Default selection for the demo: C-103 when present.
   useEffect(() => {
-    setDAiMsgs([{ kind: 'ai', html: p.opts.length ? 'Ask about any option: why it was picked, schools, rain, traffic or CO₂.' : `Ask about ${t.drv.split(' ')[0]}’s current route.` }]);
-    setProbOpt(null);
-    setProbOpen(null);
-  }, [probId, p.opts.length, t.drv]);
+    if (board && !selectedId) setSelectedId(board.shipments.find((s) => s.id === 'C-103')?.id ?? board.shipments[0]?.id ?? null);
+  }, [board, selectedId]);
 
-  const pickGo = (id: string) => {
-    setGoId(id);
-    setGoRole('eff');
-    setGoOpen('eff');
-    setAiCtx(null);
+  const loadOptions = useCallback(async (id: string) => {
+    const n = ++optSeq.current;
+    setOptError(null);
+    try {
+      const o = await getOptions(id);
+      if (n === optSeq.current) setOptions(o);
+    } catch (e) {
+      if (n === optSeq.current) setOptError(msg(e));
+    }
+  }, []);
+  useEffect(() => {
+    if (board && selectedId) void loadOptions(selectedId);
+  }, [board, selectedId, loadOptions]);
+
+  const select = (id: string) => {
+    setSelectedId(id);
+    setFocusRole('efficiency');
+    setOpenKey('efficiency');
+    setPickedId(null);
+    setReasonFor(null);
+    setExplainId(null);
     setView('go');
   };
-  const pickProb = (id: string) => {
-    setProbId(id);
-    setView('prob');
+
+  const run = async (req: () => Promise<Board>, ok?: string) => {
+    try {
+      await bs.apply(req);
+      if (ok) toast(ok);
+    } catch (e) {
+      toast(msg(e));
+    }
+  };
+  const verdict = (id: string, v: Verdict) => {
+    if (v === 'delete') return run(() => deleteDisruption(id), 'Report removed');
+    return run(() => updateDisruption(id, { verification: v }), v === 'dismissed' ? 'Marked open: figures back to normal' : v === 'confirmed' ? 'Confirmed' : 'Back to unverified');
   };
 
-  const setRoad = (id: string, st: RoadState, note: string) => {
-    setRoads((rs) =>
-      rs.map((r) => (r.id === id ? { ...r, st, note, ov: st === r.st0 && !note ? '' : `now ${SN[st]}${note ? ` · “${note}”` : ''} · 9:41 AM` } : r)),
+  const decide = async (o: ResponseOption, why?: string) => {
+    if (!selectedId) return;
+    if (!o.suggested && why === undefined) {
+      setReasonFor(o.id);
+      setReason('');
+      setReasonError(null);
+      return;
+    }
+    if (why !== undefined && why.trim().length < 3) {
+      setReasonError('Give a short reason (at least 3 characters).');
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await createDecision({ shipment_id: selectedId, option_id: o.id, ...(why !== undefined ? { reason: why.trim() } : {}) });
+      bs.set(r.board);
+      setReasonFor(null);
+      setPickedId(null);
+      toast(`Decision recorded: ${o.title}`);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 422 && e.field === 'reason') {
+        setReasonFor(o.id);
+        setReasonError(e.message);
+      } else {
+        toast(msg(e));
+        if (e instanceof ApiError && e.status === 409) void loadOptions(selectedId);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /* ---------- derived ---------- */
+  const row: ShipmentRow | null = board?.shipments.find((s) => s.id === selectedId) ?? null;
+  const opts = options && options.shipment_id === selectedId ? options : null;
+  const driverOf = (r: ShipmentRow) => (r.current.truck_id ? (network?.trucks.find((t) => t.id === r.current.truck_id)?.driver_label ?? r.current.truck_id) : 'No truck');
+  const whName = (id: string) => network?.warehouses.find((w) => w.id === id)?.name ?? id;
+  const decision: Decision | undefined = board?.decisions.find((d) => d.shipment_id === selectedId);
+  const roleOpts = ROLE_ORDER.map((role) => ({ role, o: opts?.options.find((x) => x.roles.includes(role)) ?? null }));
+  const pickedOpt = opts?.options.find((x) => x.id === pickedId) ?? roleOpts.find((x) => x.role === focusRole)?.o ?? null;
+  const others = opts?.options.filter((x) => x.kind !== 'keep' && x.kind !== 'reroute') ?? [];
+  const explainOpt = opts?.options.find((x) => x.id === explainId) ?? null;
+  const t = ONROUTE.find((x) => x.id === probId)!;
+  const p = PROB[probId];
+  const trMsgs: Msg[] = driverMsgs[probId] ?? p.chat.map(([kind, time, text]) => ({ kind, html: esc(text), time: `${time} AM` }));
+  const addDriverMsg = (m: Msg) => setDriverMsgs((all) => ({ ...all, [probId]: [...(all[probId] ?? trMsgs), m] }));
+  const problems = ONROUTE.filter((x) => x.prob).length;
+  const cls = `dapp ${view === 'map' ? 'home' : 'work'} ${view === 'net' ? 'net' : ''}`;
+
+  const roleCard = ({ role, o }: { role: RoleKey; o: ResponseOption | null }, idx: number) => {
+    const st = ROLE[role];
+    const firstHolder = o ? roleOpts.findIndex((x) => x.o?.id === o.id) : -1;
+    const sameAs = o && firstHolder !== idx ? ROLE[roleOpts[firstHolder].role].n : null;
+    if (!o) {
+      return (
+        <div key={role} className="acc">
+          <div className="acc-h" style={{ cursor: 'default' }}>
+            <span className={`sw ${st.cls}`} />
+            <span className="left">
+              <span className="at">{st.n}</span>
+              <div className="am">No feasible route holds this role.</div>
+            </span>
+          </div>
+        </div>
+      );
+    }
+    if (sameAs) {
+      return (
+        <div key={role} className={`acc ${focusRole === role ? 'sel' : ''}`}>
+          <button className="acc-h" onClick={() => setFocusRole(role)}>
+            <span className={`sw ${st.cls}`} />
+            <span className="left">
+              <span className="at">{st.n}</span>
+              <div className="am">Same route as {sameAs}: {o.title}</div>
+            </span>
+          </button>
+        </div>
+      );
+    }
+    const e = o.evaluation;
+    const late = e.slack_min < 0;
+    const holds = o.roles.map((r) => ROLE[r as RoleKey].n);
+    const isKeep = o.kind === 'keep';
+    return (
+      <Acc
+        key={role}
+        open={openKey === role}
+        sel={focusRole === role}
+        onToggle={() => {
+          setFocusRole(role);
+          setPickedId(o.id);
+          setOpenKey(openKey === role ? null : role);
+        }}
+        head={
+          <>
+            <span className={`sw ${st.cls}`} />
+            <span className="left">
+              <span className="at">{holds.join(' · ')}</span>
+              <div className="am">
+                {clock(e.eta_min)} · {e.miles.toFixed(0)} mi · {e.co2_kg.toFixed(0)} kg CO₂
+              </div>
+              <div style={{ marginTop: '.35rem' }}>
+                <span className="chip soft">{o.title}</span> {o.suggested && <span className="chip good">Suggested</span>}{' '}
+                <span className={`chip ${STATUS[e.status][1]}`}>{STATUS[e.status][0]}</span>
+              </div>
+            </span>
+            <span className={`big ${late ? 'late' : ''}`}>
+              {late ? '−' : '+'}
+              {Math.abs(e.slack_min)}
+              <small>{late ? 'min late' : 'min spare'}</small>
+            </span>
+          </>
+        }
+      >
+        <Mx
+          cells={[
+            ['Arrive', clock(e.eta_min).replace(' ', '')],
+            ['Miles', e.miles.toFixed(0)],
+            ['CO₂', `${e.co2_kg.toFixed(0)} kg`],
+            ['Cost', `$${e.cost_usd.toFixed(0)}`],
+            ['Community', e.community_score.toFixed(0), e.community_score >= 90 ? 'goodc' : e.community_score < 80 ? 'badc' : ''],
+          ]}
+        />
+        {(e.flags.length > 0 || e.needs_review) && (
+          <Tags tags={[...e.flags.map((f): Tag => ['Note', f, 'warn']), ...(e.needs_review ? [['Report', 'Depends on an unverified report', 'warn'] as Tag] : [])]} />
+        )}
+        <div className="more">
+          <p>{o.description}</p>
+          <p className="mute small">{o.route.label}{o.route.estimated ? ' (estimated path)' : ''}</p>
+          <p className="small">{e.community_detail}</p>
+          {o.burdens.length > 0 && (
+            <ul>
+              {o.burdens.map((b, i) => (
+                <li key={i}>
+                  <b>{STAKE[b.stakeholder]}:</b> {b.text}
+                </li>
+              ))}
+            </ul>
+          )}
+          {!isKeep && (
+            <table>
+              <thead>
+                <tr>
+                  <th>Versus keeping the plan</th>
+                  <th>Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>On-time chance</td><td>{signed(Math.round(o.delta.on_time_probability * 100), ' pts')}</td></tr>
+                <tr><td>Late minutes</td><td>{signed(o.delta.late_min, ' min')}</td></tr>
+                <tr><td>Miles</td><td>{signed(o.delta.miles, ' mi', 1)}</td></tr>
+                <tr><td>CO₂ (est.)</td><td>{signed(o.delta.co2_kg, ' kg', 1)}</td></tr>
+                <tr><td>Cost (est.)</td><td>{signed(o.delta.cost_usd, ' $')}</td></tr>
+                <tr><td>Community score</td><td>{signed(o.delta.community_score)}</td></tr>
+              </tbody>
+            </table>
+          )}
+          <div className="src">Roads: OpenStreetMap · figures: rule-based estimates from simulated inputs</div>
+        </div>
+        <div className="acts">
+          <button className="btn ask" onClick={() => setExplainId(o.id)}>Explain this option</button>
+        </div>
+      </Acc>
     );
   };
-
-  const aiSend = (text: string) => {
-    const q = text.trim();
-    if (!q) return;
-    setAiMsgs((m) => [...m, { kind: 'me', html: esc(q) }]);
-    window.setTimeout(() => {
-      if (aiCtx) {
-        const [a, s] = routeAnswer(q, goId, aiCtx);
-        setAiMsgs((m) => [...m, { kind: 'ai', html: a, src: s }]);
-      } else {
-        setAiMsgs((m) => [...m, { kind: 'ai', html: `(Mock) I would re-run the three routes with “${esc(q)}” and show new numbers. Tip: press “Ask AI” on a route to question it directly.` }]);
-      }
-    }, 600);
-  };
-  const askAbout = (role: Role) => {
-    setAiCtx(role);
-    setGoRole(role);
-    setGoOpen(role);
-    setAiMsgs((m) => [...m, { kind: 'sys', html: `Asking about the ${ROLE[role].n.toLowerCase()} route` }]);
-    window.setTimeout(() => document.getElementById('aiIn')?.focus(), 0);
-  };
-  const dSend = (text: string) => {
-    const q = text.trim();
-    if (!q) return;
-    setDAiMsgs((m) => [...m, { kind: 'me', html: esc(q) }]);
-    window.setTimeout(() => {
-      const [a, s] = optionAnswer(q, probId, probOpt);
-      setDAiMsgs((m) => [...m, { kind: 'ai', html: a, src: s }]);
-    }, 600);
-  };
-
-  const [fl, fc] = fatLbl(d.fat);
-  const base = mets(d, 'eff');
-  const cls = `dapp ${view === 'map' ? 'home' : 'work'} ${view === 'net' ? 'net' : ''}`;
 
   return (
     <div className={cls}>
       <div className="top">
         <span className="brand">Dispatch</span>
-        <span className="mock">MOCKUP</span>
         <nav className="nav" aria-label="Views">
           <button className={view === 'map' ? 'on' : ''} onClick={() => setView('map')}>Map</button>
           <button className={view === 'go' ? 'on' : ''} onClick={() => setView('go')}>
-            To dispatch<span className="n">{DISPATCH.length}</span>
+            To dispatch<span className="n">{board?.shipments.length ?? 0}</span>
           </button>
           <button className={view === 'prob' ? 'on' : ''} onClick={() => setView('prob')}>
             On route<span className="n alert">{problems}</span>
           </button>
           <button className={view === 'net' ? 'on' : ''} onClick={() => setView('net')}>Network</button>
         </nav>
-        <span className="clock">SAT {clock(NOW)}</span>
+        <span className="clock">{board ? clock(board.settings.clock_min) : ''}</span>
       </div>
 
       <div id="mapwrap">
         <DispatchMap
           view={view}
-          goId={goId}
-          goRole={goRole}
+          board={board}
+          network={network}
+          selectedId={selectedId}
+          focusRole={focusRole}
+          options={opts}
           probId={probId}
-          roads={roads}
-          onRoad={(id, st, note) => {
-            setRoad(id, st, note);
-            toast('Override applied (mock): trucks on this road would be re-checked');
-          }}
-          onPickGo={pickGo}
-          onPickProb={pickProb}
-          onReroute={() => {
-            toast('Mock: would open reroute options for trucks on this road');
+          onSelect={select}
+          onPickProb={(id) => {
+            setProbId(id);
             setView('prob');
           }}
+          onVerdict={verdict}
         />
         <button id="expand" onClick={() => setView('map')}>Expand map</button>
+        {view === 'map' && board && (
+          <div className="cmpfloat">
+            <Compare board={board} />
+          </div>
+        )}
         <div className={`legend ${legendOpen ? 'open' : ''}`}>
           <button className="lt" aria-expanded={legendOpen} onClick={() => setLegendOpen((o) => !o)}>
             Legend {legendOpen ? '−' : '+'}
           </button>
           <div className="lb">
-            <h5>Roads</h5>
-            <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke={GOOD} strokeWidth="4" /></svg>Open</div>
-            <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke={BAD} strokeWidth="4" strokeDasharray="7 4" /></svg>Slowed</div>
-            <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke={BAD} strokeWidth="7" /><line x1="0" y1="4" x2="30" y2="4" stroke="#fff" strokeWidth="2" strokeDasharray="4 4" /></svg>Closed</div>
-            <h5>Routes</h5>
+            <h5>Shipment routes</h5>
+            <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke={GOOD} strokeWidth="4" /></svg>On time</div>
+            <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke={INK} strokeWidth="4" strokeDasharray="7 4" /></svg>Tight</div>
+            <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke={BAD} strokeWidth="6" /></svg>At risk</div>
+            <h5>Road reports</h5>
+            <div><svg width="30" height="14"><circle cx="15" cy="7" r="6" fill="#4b4fa615" stroke="#4b4fa6" strokeWidth="2" strokeDasharray="4 3" /></svg>Unverified</div>
+            <div><svg width="30" height="14"><circle cx="15" cy="7" r="6" fill="#d4312c30" stroke={BAD} strokeWidth="2" /></svg>Confirmed</div>
+            <h5>Route roles</h5>
             <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke={INK} strokeWidth="3" /></svg>Efficiency</div>
             <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke={INK} strokeWidth="3" strokeDasharray="6 4" /></svg>Sustainability</div>
             <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke={INK} strokeWidth="3" strokeDasharray="1 4" strokeLinecap="round" /></svg>Community</div>
             <h5>Trucks</h5>
-            <div><svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="#fff" stroke={GOOD} strokeWidth="3" /></svg>On track</div>
-            <div><svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="#fff" stroke={BAD} strokeWidth="3" /></svg>Slowed</div>
-            <div><svg width="16" height="16"><circle cx="8" cy="8" r="7" fill={BAD} /></svg>Needs decision</div>
-            <div><svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="#fff" stroke="#555" strokeWidth="2" strokeDasharray="3 2" /></svg>Waiting</div>
+            <div><svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="#fff" stroke={GOOD} strokeWidth="3" /></svg>On time</div>
+            <div><svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="#fff" stroke={BAD} strokeWidth="3" /></svg>Tight</div>
+            <div><svg width="16" height="16"><circle cx="8" cy="8" r="7" fill={BAD} /></svg>At risk</div>
+            <div><svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="#fff" stroke="#555" strokeWidth="2" strokeDasharray="3 2" /></svg>Spare</div>
           </div>
         </div>
       </div>
+
+      {!board && view !== 'prob' && (
+        <div className="loadstate" role={bs.loading ? 'status' : 'alert'}>
+          {bs.loading ? (
+            'Loading the board…'
+          ) : (
+            <>
+              <b>The board could not be loaded.</b>
+              <span>{bs.error?.status === 0 ? 'The server is not responding. Check that it is running, then retry.' : bs.error?.message}</span>
+              <button className="btn pri" onClick={() => { bs.retry(); loadStatic(); }}>Retry</button>
+            </>
+          )}
+        </div>
+      )}
+      {bs.error && board && (
+        <div className="connbar" role="alert">
+          Lost connection to the server. Showing the last board received.{' '}
+          <button className="btn sm" onClick={bs.retry}>Retry</button>
+        </div>
+      )}
 
       <div id="work">
         <div className="col list">
           <div className="pick">
             {view === 'go' &&
-              DISPATCH.map((x) => (
-                <button key={x.id} className={x.id === goId ? 'on' : ''} onClick={() => pickGo(x.id)}>
-                  <span className="id">{x.id}</span>
+              board?.shipments.map((s) => (
+                <button key={s.id} className={s.id === selectedId ? 'on' : ''} onClick={() => select(s.id)}>
+                  <span className="id">{s.id}</span>
                   <span className="nm">
-                    <b>{x.drv}</b>
+                    <b>{driverOf(s)}</b>
                     <div className="sub">
-                      {WH[x.pair.split('>')[1]].n}
-                      {x.pri ? ' · priority' : ''}
+                      {s.cargo} · {s.terminal_id} → {s.warehouse_id}
+                      {s.priority === 'high' ? ' · priority' : ''}
                     </div>
-                    <div className="sub" style={{ fontFamily: 'var(--mono)' }}>by {clock(winEnd(x))}</div>
+                    <div className="sub" style={{ fontFamily: 'var(--mono)' }}>
+                      <span className={`chip ${STATUS[s.current.status][1]}`}>{STATUS[s.current.status][0]}</span>{' '}
+                      {s.current.slack_min >= 0 ? `+${s.current.slack_min} min spare` : `−${Math.abs(s.current.slack_min)} min late`}
+                    </div>
                   </span>
                 </button>
               ))}
@@ -331,86 +515,151 @@ export default function DispatchApp() {
               ))}
           </div>
         </div>
+
         <div className="col center">
-          {view === 'go' && (
+          {view === 'go' && row && (
             <section className="view on">
               <div className="ttl">
-                {d.drv} → {WH[d.pair.split('>')[1]].n}
+                {driverOf(row)} → {whName(row.warehouse_id)}
               </div>
               <div className="sub2">
-                {d.id} · {d.ctn} {d.cargo} · arrive by <b>{clock(winEnd(d))}</b> · fatigue <b style={{ color: fc }}>{fl.toLowerCase()}</b>
+                {row.id} · {row.cargo} · window <b>{clock(row.current.appt_start_min)} to {clock(row.current.appt_end_min)}</b> · status{' '}
+                <b className={row.current.status === 'on_time' ? 'goodc' : 'badc'}>{STATUS[row.current.status][0].toLowerCase()}</b>
+                {row.current.needs_review && ' · depends on an unverified report'}
               </div>
-              {(['eff', 'sus', 'com'] as Role[]).map((role) => {
-                const m = mets(d, role);
-                const eta = NOW + 35 + m.min;
-                const sl = winEnd(d) - eta;
-                const late = sl < 0;
-                const df = (a: number, b: number, u: string, n = 0) => {
-                  const x = a - b;
-                  return Math.abs(x) < 0.05 ? 'same' : `${x > 0 ? '+' : '−'}${Math.abs(x).toFixed(n)}${u}`;
-                };
-                return (
-                  <Acc
-                    key={role}
-                    open={goOpen === role}
-                    sel={goRole === role}
-                    onToggle={() => {
-                      setGoRole(role);
-                      setGoOpen(goOpen === role ? null : role);
-                    }}
-                    head={
-                      <>
-                        <span className={`sw ${role}`} />
-                        <span className="left">
-                          <span className="at">{ROLE[role].n}</span>
-                          <div className="am">
-                            {clock(eta)} · {m.mi.toFixed(0)} mi · {m.co2.toFixed(0)} kg CO₂
+              <Compare board={board!} compact />
+              {optError && (
+                <div className="alert bad">
+                  {optError}{' '}
+                  <button className="btn sm" onClick={() => selectedId && loadOptions(selectedId)}>Retry</button>
+                </div>
+              )}
+              {!opts && !optError && <div className="mute">Loading route options…</div>}
+              {opts && (
+                <>
+                  {opts.suggested_option_id && (
+                    <div className="alert ok">
+                      <b>Suggested:</b> {opts.rationale}
+                      <div className="src">Rule-based score from the dispatch priorities. You decide.</div>
+                    </div>
+                  )}
+                  {decision && (
+                    <div className="alert ok">
+                      <b>Decided:</b> {decision.option_title} ({decision.was_suggested ? 'suggested' : `override: ${decision.reason ?? ''}`})
+                      <textarea className="draft" readOnly value={decision.supervisor_update} aria-label="Drafted supervisor update" />
+                      <div className="acts">
+                        <button
+                          className="btn sm"
+                          onClick={() => {
+                            void navigator.clipboard?.writeText(decision.supervisor_update).then(() => {
+                              setCopied(true);
+                              setTimeout(() => setCopied(false), 2000);
+                            });
+                          }}
+                        >
+                          {copied ? 'Copied' : 'Copy update'}
+                        </button>
+                        <button className="btn sm" disabled={busy} onClick={() => run(() => deleteDecision(decision.id), 'Decision undone')}>Undo</button>
+                        <span className="mute small">The tool does not send anything.</span>
+                      </div>
+                    </div>
+                  )}
+                  {roleOpts.map(roleCard)}
+                  {(row.attention === 'act' || row.attention === 'watch') && others.length > 0 && (
+                    <>
+                      <h4>Other responses</h4>
+                      {others.map((o) => (
+                        <Acc
+                          key={o.id}
+                          open={openKey === o.id}
+                          sel={pickedId === o.id}
+                          onToggle={() => {
+                            if (o.feasible) setPickedId(o.id);
+                            setOpenKey(openKey === o.id ? null : o.id);
+                          }}
+                          head={
+                            <>
+                              <span className="left">
+                                <span className="at">{o.title}</span>
+                                <div style={{ marginTop: '.35rem' }}>
+                                  {o.suggested && <span className="chip good">Suggested</span>}{' '}
+                                  {!o.feasible && <span className="chip bad">Not possible</span>}{' '}
+                                  <span className={`chip ${STATUS[o.evaluation.status][1]}`}>{STATUS[o.evaluation.status][0]}</span>
+                                </div>
+                              </span>
+                              <span className={`big ${o.evaluation.slack_min < 0 ? 'late' : ''}`}>
+                                {o.evaluation.slack_min < 0 ? '−' : '+'}
+                                {Math.abs(o.evaluation.slack_min)}
+                                <small>{o.evaluation.slack_min < 0 ? 'min late' : 'min spare'}</small>
+                              </span>
+                            </>
+                          }
+                        >
+                          <Mx
+                            cells={[
+                              ['Arrive', clock(o.evaluation.eta_min).replace(' ', '')],
+                              ['Miles', o.evaluation.miles.toFixed(0)],
+                              ['CO₂', `${o.evaluation.co2_kg.toFixed(0)} kg`],
+                              ['Cost', `$${o.evaluation.cost_usd.toFixed(0)}`],
+                              ['Community', o.evaluation.community_score.toFixed(0)],
+                            ]}
+                          />
+                          <div className="more">
+                            <p>{o.description}</p>
+                            {!o.feasible && o.infeasible_reason && <p className="badc">{o.infeasible_reason}</p>}
+                            <ul>
+                              {o.burdens.map((b, i) => (
+                                <li key={i}>
+                                  <b>{STAKE[b.stakeholder]}:</b> {b.text}
+                                </li>
+                              ))}
+                            </ul>
                           </div>
-                        </span>
-                        <span className={`big ${late ? 'late' : ''}`}>
-                          {late ? '−' : '+'}
-                          {Math.abs(Math.round(sl))}
-                          <small>{late ? 'min late' : 'min spare'}</small>
-                        </span>
-                      </>
-                    }
-                  >
-                    <Mx a={clock(eta).replace(' ', '')} b={m.mi.toFixed(0)} c={`${m.co2.toFixed(0)} kg`} d={`$${m.cost.toFixed(0)}`} e={m.comm} />
-                    <Issues tags={summaryTags(d, role)} />
-                    <div className="more">
-                      <p>{ROLE[role].goal}</p>
-                      <p className="mute small">{m.roads}</p>
-                      <table>
-                        <thead>
-                          <tr><th>Factor</th><th>This</th><th>Fastest</th><th>Diff</th></tr>
-                        </thead>
-                        <tbody>
-                          <tr><td>Drive time</td><td>{m.min} min</td><td>{base.min} min</td><td>{df(m.min, base.min, ' min')}</td></tr>
-                          <tr><td>Miles</td><td>{m.mi.toFixed(0)}</td><td>{base.mi.toFixed(0)}</td><td>{df(m.mi, base.mi, ' mi')}</td></tr>
-                          <tr><td>CO₂ (est.)</td><td>{m.co2.toFixed(0)} kg</td><td>{base.co2.toFixed(0)} kg</td><td>{df(m.co2, base.co2, ' kg')}</td></tr>
-                          <tr><td>Local-street miles</td><td>{m.local.toFixed(1)}</td><td>{base.local.toFixed(1)}</td><td>{df(m.local, base.local, ' mi', 1)}</td></tr>
-                          <tr><td>School zones (250 m)</td><td>{m.sch}</td><td>{base.sch}</td><td>{df(m.sch, base.sch, '')}</td></tr>
-                        </tbody>
-                      </table>
-                      <div className="src">Roads: OpenStreetMap · Incidents: live · Traffic, CO₂: estimates · Rain: NWS</div>
-                    </div>
-                    <div className="acts">
-                      <button className="btn ask" onClick={() => askAbout(role)}>Ask AI about this route</button>
-                    </div>
-                  </Acc>
-                );
-              })}
-              <div style={{ marginTop: '1.2rem', display: 'flex', gap: '.8rem' }}>
-                <button className="btn pri lg" style={{ flex: 1 }} onClick={() => toast(`Mock: ${d.drv} dispatched on the ${ROLE[goRole].n.toLowerCase()} route`)}>
-                  Dispatch {d.drv.split(' ')[0]} on the {ROLE[goRole].n.toLowerCase()} route
-                </button>
-                <button className="btn lg" onClick={() => toast(`Mock: ${d.drv.split(' ')[0]} held at the yard`)}>Hold</button>
-              </div>
+                          <div className="acts">
+                            <button className="btn ask" onClick={() => setExplainId(o.id)}>Explain this option</button>
+                          </div>
+                        </Acc>
+                      ))}
+                    </>
+                  )}
+                  {reasonFor && (
+                    <form
+                      className="alert warn"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const o = opts.options.find((x) => x.id === reasonFor);
+                        if (o) void decide(o, reason);
+                      }}
+                    >
+                      <label htmlFor="reason">
+                        <b>Why this instead of the suggestion?</b>
+                      </label>
+                      <div className="send" style={{ padding: '.5rem 0 0' }}>
+                        <input id="reason" autoFocus maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={!!reasonError} aria-describedby={reasonError ? 'reason-err' : undefined} />
+                        <button className="btn pri" type="submit" disabled={busy}>Confirm</button>
+                        <button className="btn" type="button" onClick={() => setReasonFor(null)}>Cancel</button>
+                      </div>
+                      {reasonError && (
+                        <div id="reason-err" className="badc small" role="alert">
+                          {reasonError}
+                        </div>
+                      )}
+                    </form>
+                  )}
+                  <div style={{ marginTop: '1.2rem', display: 'flex', gap: '.8rem' }}>
+                    <button className="btn pri lg" style={{ flex: 1 }} disabled={!pickedOpt || !pickedOpt.feasible || busy} onClick={() => pickedOpt && decide(pickedOpt)}>
+                      {busy ? 'Recording…' : pickedOpt ? `Dispatch ${driverOf(row)}: ${pickedOpt.title}` : 'Choose a route'}
+                    </button>
+                    <button className="btn lg" onClick={() => toast('Held at the yard. Nothing was changed or sent.')}>Hold</button>
+                  </div>
+                </>
+              )}
             </section>
           )}
 
           {view === 'prob' && (
             <section className="view on">
+              <div className="scripted">Scripted example: trucks on the road are not computed by the backend.</div>
               <div className="ttl">
                 {t.drv}{' '}
                 <span className={`chip ${t.sit}`} style={{ fontSize: '.9rem', marginLeft: '.4rem' }}>{t.sitT}</span>
@@ -465,13 +714,7 @@ export default function DispatchApp() {
                             {i + 1}. {o.t}
                           </span>
                           <div style={{ marginTop: '.4rem' }}>
-                            <span className="chip">{OBJ[o.obj]}</span>
-                            {o.rec && (
-                              <>
-                                {' '}
-                                <span className="chip good">Suggested</span>
-                              </>
-                            )}
+                            <span className="chip">{OBJ[o.obj]}</span> {o.rec && <span className="chip good">Suggested</span>}
                           </div>
                         </span>
                         <span className={`big ${/^\+/.test(o.eta) ? 'neg' : ''}`}>
@@ -481,7 +724,7 @@ export default function DispatchApp() {
                       </>
                     }
                   >
-                    <Mx a={o.eta} b={o.mi} c={o.co2} d={o.cost} e={o.comm} signed />
+                    <Mx cells={[['Arrive', o.eta], ['Miles', o.mi], ['CO₂', o.co2], ['Cost', o.cost], ['Community', o.comm]]} />
                     <Tags tags={o.tags} />
                     <div className="more">
                       <p>
@@ -492,30 +735,27 @@ export default function DispatchApp() {
                           <li key={k}>{w}</li>
                         ))}
                       </ul>
-                      <div className="src">
-                        Goal: {OBJ[o.obj].toLowerCase()} · estimates · {p.src}
-                      </div>
+                      <div className="src">Goal: {OBJ[o.obj].toLowerCase()} · scripted example</div>
                     </div>
                     <div className="acts">
                       <button
                         className={`btn ${o.rec ? 'pri' : ''}`}
                         onClick={() => {
-                          toast(`Mock: option ${i + 1} sent to ${t.drv}`);
+                          toast(`Scripted: option ${i + 1} sent to ${t.drv}`);
                           addDriverMsg({ kind: 'me', html: `Plan sent: ${esc(o.t)}`, time: '9:41 AM' });
                           setSideTab('chat');
                         }}
                       >
-                        Send to {t.drv.split(' ')[0]}
+                        Send to {t.drv}
                       </button>
                       <button
                         className="btn ask"
                         onClick={() => {
                           setProbOpt(i);
-                          setSideTab('ai');
-                          window.setTimeout(() => document.getElementById('dAiIn')?.focus(), 0);
+                          setSideTab('explain');
                         }}
                       >
-                        Ask AI about this
+                        Explain this option
                       </button>
                     </div>
                   </Acc>
@@ -526,70 +766,69 @@ export default function DispatchApp() {
 
           {view === 'net' && (
             <section className="view on">
+              {netError && (
+                <div className="alert bad">
+                  {netError} <button className="btn sm" onClick={loadStatic}>Retry</button>
+                </div>
+              )}
+              {board && <Compare board={board} compact />}
               <div className="two">
                 <div>
                   <h4>Warehouses</h4>
-                  {Object.values(WH).map((w) => {
-                    const u = w.used / w.cap;
+                  {network?.warehouses.map((w) => {
+                    const u = w.capacity ? w.booked / w.capacity : 0;
                     return (
-                      <div key={w.n} className="row1">
+                      <div key={w.id} className="row1">
                         <div className="nm">
-                          <b>{w.n}</b>
+                          <b>{w.name}</b>
                           <div className="sub">
-                            {w.used}/{w.cap} slots · closes {w.closes}
-                            {w.back ? ` · ${w.back}` : ''}
+                            {w.booked}/{w.capacity} slots booked today · {w.docks} docks
                           </div>
                           <div className="bar" style={{ marginTop: '.4rem' }}>
-                            <i style={{ width: `${u * 100}%`, background: u < 0.7 ? GOOD : u < 0.9 ? INK : BAD }} />
+                            <i style={{ width: `${Math.min(100, u * 100)}%`, background: u < 0.7 ? GOOD : u < 0.9 ? INK : BAD }} />
                           </div>
                         </div>
-                        <span className={`chip ${w.c}`}>{w.state}</span>
                       </div>
                     );
                   })}
                 </div>
                 <div>
-                  <h4>Roads · set your own status</h4>
-                  {roads.map((r) => (
-                    <div key={r.id} className="row1">
-                      <div className="nm">
-                        <b>{r.n}</b>
-                        <div className="sub">
-                          {r.detail} · {r.src}
-                        </div>
-                        {r.ov && (
-                          <div style={{ marginTop: '.2rem' }}>
-                            <span className="badge-o">Override</span>{' '}
-                            <a
-                              href="#"
-                              className="small"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                setRoad(r.id, r.st0, '');
-                              }}
-                            >
-                              undo
-                            </a>
+                  <h4>Roads · report and set your own status</h4>
+                  {presets
+                    .filter((pr) => ['slowdown', 'closure', 'hazard'].includes(pr.disruption.kind))
+                    .map((pr) => {
+                      const d: Disruption | undefined = board?.disruptions.find((x) => x.label === (pr.disruption.label ?? ''));
+                      return (
+                        <div key={pr.id} className="row1">
+                          <div className="nm">
+                            <b>{pr.label}</b>
+                            <div className="sub">
+                              {pr.description} · {SOURCE[pr.disruption.source ?? 'simulated']}
+                            </div>
+                            {d && (
+                              <div style={{ marginTop: '.3rem' }}>
+                                <span className={`chip ${d.verification === 'confirmed' ? 'bad' : d.verification === 'unverified' ? 'soft' : 'ok'}`}>{VER[d.verification]}</span>{' '}
+                                <span className="small mute">affects {d.affected_shipment_ids.join(', ') || 'no shipment'}</span>{' '}
+                                <a href="#" className="small" onClick={(e) => { e.preventDefault(); void verdict(d.id, 'delete'); }}>remove</a>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      <div className="seg3" role="group" aria-label={`Status of ${r.n}`}>
-                        {(['open', 'slowed', 'closed'] as RoadState[]).map((s) => (
-                          <button
-                            key={s}
-                            className={r.st === s ? 'on' : ''}
-                            aria-pressed={r.st === s}
-                            onClick={() => {
-                              setRoad(r.id, s, '');
-                              toast(`${SN[s]}: override applied (mock)`);
-                            }}
-                          >
-                            {SN[s]}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                          {d ? (
+                            <div className="seg3" role="group" aria-label={`Your call on ${pr.label}`}>
+                              {(['unverified', 'confirmed', 'dismissed'] as const).map((v) => (
+                                <button key={v} className={d.verification === v ? 'on' : ''} aria-pressed={d.verification === v} onClick={() => verdict(d.id, v)}>
+                                  {VER[v]}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <button className="btn sm" onClick={() => run(() => createDisruption(pr.disruption), `${pr.label} reported (unverified)`)}>
+                              Report
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             </section>
@@ -601,22 +840,22 @@ export default function DispatchApp() {
         {view === 'go' && (
           <div className="sidepane on">
             <div className="sidehd">
-              <span className="t">Assistant</span>
+              <span className="t">Explain this option</span>
             </div>
-            <Messages msgs={aiMsgs} />
-            {aiCtx && (
-              <div className="ctx on">
-                Asking about: {ROLE[aiCtx].n} route, {d.drv}
-                <a onClick={() => setAiCtx(null)} role="button" tabIndex={0}>clear</a>
-              </div>
-            )}
-            <div className="quick">
-              {(aiCtx ? ['Why was this route picked?', 'Which schools does it pass?', 'Will rain slow it down?', 'Leave 20 min later?'] : ['Make it greener', 'Avoid school zones', 'Need it 30 min faster']).map((q) => (
-                <button key={q} onClick={() => aiSend(q)}>{q}</button>
-              ))}
-            </div>
-            <div className="send">
-              <AiInput id="aiIn" placeholder="Ask about a route or request a change" onSend={aiSend} />
+            <div className="msgs">
+              {!explainOpt ? (
+                <div className="m sys">Press “Explain this option” on a route card to see why it scores as it does.</div>
+              ) : (
+                <div className="m ai">
+                  <b>{explainOpt.title}</b>
+                  <ul style={{ margin: '.4rem 0', paddingLeft: '1.1rem' }}>
+                    {explain(explainOpt, opts?.rationale ?? '').map((line, i) => (
+                      <li key={i}>{line}</li>
+                    ))}
+                  </ul>
+                  <div className="srcline">{SCRIPTED_LINE}</div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -624,7 +863,7 @@ export default function DispatchApp() {
           <div className="sidepane on">
             <div className="sidehd">
               <button className={sideTab === 'chat' ? 'on' : ''} onClick={() => setSideTab('chat')}>Driver chat</button>
-              <button className={sideTab === 'ai' ? 'on' : ''} onClick={() => setSideTab('ai')}>Ask AI</button>
+              <button className={sideTab === 'explain' ? 'on' : ''} onClick={() => setSideTab('explain')}>Explain this option</button>
             </div>
             {sideTab === 'chat' ? (
               <div className="chat on">
@@ -634,24 +873,25 @@ export default function DispatchApp() {
                     <button key={q} onClick={() => addDriverMsg({ kind: 'me', html: esc(q), time: '9:41 AM' })}>{q}</button>
                   ))}
                 </div>
-                <SendBox placeholder="Message the driver" onSend={(x) => addDriverMsg({ kind: 'me', html: esc(x.trim()), time: '9:41 AM' })} />
+                <ChatInput onSend={(x) => addDriverMsg({ kind: 'me', html: esc(x), time: '9:41 AM' })} />
               </div>
             ) : (
               <div className="chat on">
-                <Messages msgs={dAiMsgs} />
-                {probOpt != null && p.opts[probOpt] && (
-                  <div className="ctx on">
-                    Asking about option {probOpt + 1}: {p.opts[probOpt].t}
-                    <a onClick={() => setProbOpt(null)} role="button" tabIndex={0}>clear</a>
-                  </div>
-                )}
-                <div className="quick">
-                  {['Why was this picked?', 'Which schools?', 'Will rain slow it down?', 'What if the driver refuses?'].map((q) => (
-                    <button key={q} onClick={() => dSend(q)}>{q}</button>
-                  ))}
-                </div>
-                <div className="send">
-                  <AiInput id="dAiIn" placeholder="e.g. Which schools does option 2 pass?" onSend={dSend} />
+                <div className="msgs">
+                  {probOpt == null || !p.opts[probOpt] ? (
+                    <div className="m sys">Press “Explain this option” on an option.</div>
+                  ) : (
+                    <div className="m ai">
+                      <b>{p.opts[probOpt].t}</b>
+                      <ul style={{ margin: '.4rem 0', paddingLeft: '1.1rem' }}>
+                        <li>{p.opts[probOpt].s}</li>
+                        {p.opts[probOpt].why.map((w, k) => (
+                          <li key={k}>{w}</li>
+                        ))}
+                      </ul>
+                      <div className="srcline">{SCRIPTED_LINE} Scripted example.</div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -664,16 +904,16 @@ export default function DispatchApp() {
   );
 }
 
-function AiInput({ id, placeholder, onSend }: { id: string; placeholder: string; onSend: (t: string) => void }) {
+function ChatInput({ onSend }: { onSend: (t: string) => void }) {
   const [v, setV] = useState('');
   const go = () => {
-    onSend(v);
+    if (v.trim()) onSend(v.trim());
     setV('');
   };
   return (
-    <>
-      <input id={id} placeholder={placeholder} aria-label={placeholder} value={v} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go()} />
+    <div className="send">
+      <input placeholder="Message the driver" aria-label="Message the driver" value={v} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go()} />
       <button className="btn pri" onClick={go}>Send</button>
-    </>
+    </div>
   );
 }
