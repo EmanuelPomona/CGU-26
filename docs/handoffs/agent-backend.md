@@ -273,3 +273,28 @@ $ curl -fsS localhost:8012/api/shipments/C-103/options   # live service, auto-re
 
 ### Commit
 `967627b` (code). This handoff and the TASK-006 status are in the commit that follows it.
+
+### HANDOFF-3 addendum — sustainability window (2026-11-14)
+**Change.** Merged `main` (`844532c`). Per the updated `Option.roles` description, `sustainability` is now chosen only among options arriving within 30 minutes of the earliest, the same window as `community`. Commit `c30496a`. I did not touch the role pool, the constants or the data.
+
+**Tests.** Two tests were added and seen failing before the change:
+- A unit case where the cleanest option arrives 2.5 h late and is excluded, while an option at exactly 30 min stays eligible.
+- The close60-confirmed case: for C-103 and C-107, the sustainability holder does not cross D-1, is within 30 min of the earliest, and is not at risk.
+
+**Verification.**
+```
+$ cd backend && python3 -m pytest -q    -> 153 passed in 2.82s
+$ ruff check app tests scripts          -> All checks passed!
+$ mypy app --ignore-missing-imports     -> Success: no issues found in 24 source files
+```
+
+**Roles under close60 confirmed** (live service on 8012; efficiency / sustainability / community):
+
+| Shipment | Roles |
+|---|---|
+| C-101, C-102, C-105, C-106 | keep holds all three |
+| C-103 | reroute:POLA-ONT-1 (10:41, 207.0 kg, community 92, on time) holds all three; before this change, sustainability went to POLA-ONT-2 at 1:08 PM, at risk |
+| C-104 | keep / keep / reroute:POLB-FON-1 |
+| C-107 | reroute:POLB-ONT-1 (10:12, 174.1 kg, community 94, on time) holds all three; before this change, sustainability went to keep at 12:40 PM, at risk |
+
+**Normal-day roles are unchanged.** Every option that won sustainability before was already within 30 minutes of the earliest. C-103 and C-107 remain the two-card demo trucks.
