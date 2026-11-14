@@ -1,7 +1,10 @@
 # STATUS: agent/reviewer
 Task: unassigned (no task in REVIEW; manager instructed stand-by)
 Round: 0
-Last updated: 2026-11-14T19:40:00Z
+Last updated: 2026-11-14T20:33:00Z
+
+Timestamp note: entries before 20:31Z were written from estimates, not a clock.
+Corrected below to the commit times (`git log --format=%cI`).
 
 ## Skills invoked so far
 - none yet. Review-stage skills (ecc:browser-qa, frontend-design:frontend-design,
@@ -9,51 +12,74 @@ Last updated: 2026-11-14T19:40:00Z
   superpowers:verification-before-completion) are deferred to the review stage
   they govern (protocol section 18, mandatory timing).
 
+## Review scope (from main 409dc98, ADR-007 / ADR-008)
+- Backend: TASK-001, 002, 003, 004, 006 (Option.roles). Gate unchanged:
+  B-1..B-5, contract-test.sh, pytest.
+- Frontend: TASK-101, TASK-107 (Dispatch UI wired to backend). TASK-102..106
+  superseded (BACKLOG). Gate: F-1..F-6, U-1..U-3, G-*, P-*, I-*.
+- ADR-008: owner waived frontend unit tests, screenshots, console log for the
+  build. Missing BUILDER evidence is an owner decision (DEBT.md), not a worker
+  violation. Protocol 10/22 still bar APPROVED without runtime evidence.
+  My default: I still drive the frontend in a browser myself at review (my
+  time, not a builder's) so the verdict rests on a real walkthrough. Told
+  manager and owner; awaiting redirect if the owner wants otherwise.
+- Visual findings vs the owner's mockup: advisory only (brief, "Justified
+  exceptions").
+
 ## Done
 - [x] Read planning docs at 54afc1c: AGENT_PROTOCOL, ACCEPTANCE, API, PRODUCT,
       DESIGN_BRIEF, DESIGN_CONSTRAINTS, SKILL_ROUTING, tasks/INDEX
 - [x] Confirmed review tooling present: scripts/audit-skills.sh,
       contract-test.sh, slop-check.sh, bootstrap.sh, tasks.sh
-- [x] Pre-review palette contrast check (WCAG relative luminance, python3)
+- [x] Pre-review palette contrast check (commit f8416cd, 19:31Z)
+- [x] Read main 409dc98 replan: ADR-007, ADR-008, DEBT.md, ACCEPTANCE diff,
+      rewritten DESIGN_BRIEF, TASK-107, TASK-006, API/openapi diff (20:31Z)
 
 ## In progress
-- [ ] Standing by for manager message after integration on main, when tasks
-      move to REVIEW. Next action then: read every REVIEW task file + handoffs,
-      run scripts/bootstrap.sh, start app, begin review order step 1.
+- [ ] Standing by for manager message after integration on main. Then: merge
+      main, read every REVIEW task + handoffs, bootstrap, start own backend
+      on 8003 / frontend on 3003, review order step 1.
 
 ## Verified
-- Brief palette, status text contrast (brief requires 4.5:1 on #F8F6F0):
-  - on time #1F6F4A 5.66, at risk #B3312A 5.73, unverified #4B4FA6 6.55: pass
-  - **tight #A8690F 4.14 on panel, 3.82 on canvas: FAILS the brief's own rule.**
-    Nearest same-hue pass: #985F0E (4.88 panel, 4.51 canvas). Reported to manager.
-  - ghost #9AA1A8 2.42 on panel: below 3:1 for a meaningful graphic (WCAG 1.4.11)
-    if the ghost tick is the only carrier of the normal ETA. Advisory.
-  - secondary #5C6670 4.99 on canvas, 5.41 on panel: pass
-- Manager fix verified on main 0ec5ef9 (`git show main:docs/DESIGN_BRIEF.md`,
-  recomputed): tight now #985F0E (4.88 panel / 4.51 canvas, pass); ghost now
-  #7C848C (3.51 panel / 3.24 canvas, passes 3:1) plus shorter-tick shape cue.
-  Old values #A8690F / #9AA1A8 no longer in the brief.
+- Original brief palette (54afc1c): tight #A8690F failed 4.5:1 (4.14 panel);
+  manager fixed to #985F0E in 0ec5ef9, recomputed 4.88/4.51. Now moot: the
+  brief rewritten in c457602 adopts the owner mockup's palette.
+- Ports (checked ~19:58Z, commit 34e8f45): 8003/3003 free; 8002 (pid 86078)
+  and 8012 (pid 32764) held by other Python processes. This session has made
+  no HTTP requests and started no processes.
+- **Defect on main (reported to manager 20:3xZ):** a50723f deleted
+  `docs/reference/sample-prototype.html`, but API.md "Evaluation model
+  (normative)" still defines rules 3, 4, 7, 8, 9, 10 and the `fire`/`flood`
+  preset geometry only as "as the reference X". Also cited by
+  ARCHITECTURE.md:33, TASK-001:49, handoffs/main.md:16. Surviving copy:
+  `git show 54afc1c:docs/reference/sample-prototype.html`.
+- **Stale criteria on main (reported):** P-2 and P-5 name the "indicator
+  strip"; G-6 names "map and board". The Dispatch UI has neither. Unless the
+  manager says otherwise I gate: indicator strip -> TASK-107 "Normal vs
+  changed" comparison; board -> To dispatch view.
 
 ## Pre-review watch list (hypotheses to check at review, not findings)
-- SKILL_ROUTING names skills not registered in this session:
-  `redesign-existing-projects`, `image-to-code`, `ecc:nextjs`
-  (registered: `vercel:nextjs`, `ecc:nextjs-turbopack`). A handoff claiming
-  one of these is a fabricated-skill CRITICAL unless the audit shows it.
-- Frontend must use tight #985F0E and ghost #7C848C (brief at main 0ec5ef9);
-  grep frontend/ for #A8690F / #9AA1A8. Ghost tick must be visibly shorter
-  than the live tick (second cue, not color alone).
-- Runtime isolation (manager, 19:40): review against MY OWN backend on
-  BACKEND_PORT=8003 / FRONTEND_PORT=3003 (.env). Never touch 8012 (backend
-  worker's shared in-memory board) or 8002 (unrelated app answering
-  /api/health). Checked 19:40: 8003/3003 free; 8002 and 8012 held by other
-  Python processes. This session has made no requests to any port.
-  At review start, confirm /api/health on 8003 is MY process (lsof pid) before
-  trusting any response.
-- Manager says none of the unregistered skills apply and frontend was told
-  not to claim them; still audit.
-- F-4: confirm frontend/src/api types are generated (openapi-typescript), not handwritten.
-- I-3: grep frontend/ and backend/ for hardcoded 3000/8000.
-- G-7: grep UI strings for "AI", "optimal", "model predicts", "smart", "insights".
+- Runtime isolation: own backend on 8003, own frontend on 3003. Never touch
+  8012 or 8002. Before trusting a response, confirm with lsof that the pid
+  serving 8003 is mine.
+- Skill audit: SKILL_ROUTING names unregistered skills
+  (`redesign-existing-projects`, `image-to-code`, `ecc:nextjs`); a claim of
+  one that the audit does not show is a fabricated-skill CRITICAL.
+- TASK-006: roles from unrounded values; exactly one holder per role when any
+  feasible keep/reroute exists; [] for non-route kinds and infeasible options;
+  30-minute community window. Recompute from a live options response.
+- TASK-107 / G-7 / U-3: grep frontend/src for "AI", "Ask AI", "optimal",
+  "model predicts", personal names; "MOCKUP" badge gone from wired views;
+  "Scripted example" on On route.
+- TASK-107 F-1: stop my backend; Map / To dispatch / Network must show error +
+  Retry, not fallback data. grep for DISPATCH, WH, TERM, ROLE, routes.json
+  still imported by wired views.
+- TASK-107 Requests: no explicit null in optional request fields (API.md now
+  says null is 422); no hardcoded port (I-3).
+- F-5: frontend/src/api/schema.d.ts regenerates byte-identical from
+  docs/openapi.yaml via `gen:api`.
+- 409 swap-lock path (API.md change e207050): UI shows server message and
+  reloads options.
 
 ## Blocked on
 - nothing (waiting is by instruction, not a blocker)
