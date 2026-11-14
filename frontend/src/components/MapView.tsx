@@ -88,6 +88,8 @@ export function MapView(props: Props) {
     m.on('click', (e: L.LeafletMouseEvent) => {
       if (placingRef.current) onPlaceRef.current({ lat: e.latlng.lat, lng: e.latlng.lng });
     });
+    m.getContainer().setAttribute('role', 'region');
+    m.getContainer().setAttribute('aria-roledescription', 'map');
     m.getContainer().setAttribute('aria-label', 'Map of routes, warehouses and changed conditions');
     map.current = m;
     let fitted = false;
