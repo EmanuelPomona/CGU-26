@@ -1,7 +1,7 @@
 # STATUS: agent/reviewer
 Task: unassigned (no task in REVIEW; manager instructed stand-by)
 Round: 0
-Last updated: 2026-11-14T20:33:00Z
+Last updated: 2026-11-14T20:32:45Z
 
 Timestamp note: entries before 20:31Z were written from estimates, not a clock.
 Corrected below to the commit times (`git log --format=%cI`).
@@ -20,9 +20,11 @@ Corrected below to the commit times (`git log --format=%cI`).
 - ADR-008: owner waived frontend unit tests, screenshots, console log for the
   build. Missing BUILDER evidence is an owner decision (DEBT.md), not a worker
   violation. Protocol 10/22 still bar APPROVED without runtime evidence.
-  My default: I still drive the frontend in a browser myself at review (my
-  time, not a builder's) so the verdict rests on a real walkthrough. Told
-  manager and owner; awaiting redirect if the owner wants otherwise.
+  Manager confirmed (msg ~20:40Z): ADR-008 waives evidence as a BUILDER
+  requirement, not my independent check. Plan: own walkthrough on 8003/3003
+  against F-1..F-6; if it yields R-01..03 + R-console.txt, issue a real
+  frontend verdict, else BLOCKED. ORDER: backend gate first, then the
+  frontend walkthrough, time-boxed.
 - Visual findings vs the owner's mockup: advisory only (brief, "Justified
   exceptions").
 
@@ -47,16 +49,14 @@ Corrected below to the commit times (`git log --format=%cI`).
 - Ports (checked ~19:58Z, commit 34e8f45): 8003/3003 free; 8002 (pid 86078)
   and 8012 (pid 32764) held by other Python processes. This session has made
   no HTTP requests and started no processes.
-- **Defect on main (reported to manager 20:3xZ):** a50723f deleted
-  `docs/reference/sample-prototype.html`, but API.md "Evaluation model
-  (normative)" still defines rules 3, 4, 7, 8, 9, 10 and the `fire`/`flood`
-  preset geometry only as "as the reference X". Also cited by
-  ARCHITECTURE.md:33, TASK-001:49, handoffs/main.md:16. Surviving copy:
-  `git show 54afc1c:docs/reference/sample-prototype.html`.
-- **Stale criteria on main (reported):** P-2 and P-5 name the "indicator
-  strip"; G-6 names "map and board". The Dispatch UI has neither. Unless the
-  manager says otherwise I gate: indicator strip -> TASK-107 "Normal vs
-  changed" comparison; board -> To dispatch view.
+- RESOLVED on main d2ebf39: `docs/reference/sample-prototype.html` (deleted
+  by accident in a50723f via `git add -A`) restored; blob 0be415b6 identical
+  to 54afc1c (`git rev-parse` both). It was the only file deleted on main
+  since 54afc1c (`git log --diff-filter=D`, `comm` of ls-trees: nothing
+  else missing). Engine rules in API.md gate against this file.
+- RESOLVED on main d2ebf39: P-2 / P-5 now "normal vs changed comparison";
+  G-6 now "map and the To dispatch view". Remaining "board" in B-4 is the
+  API `Board` object, correct.
 
 ## Pre-review watch list (hypotheses to check at review, not findings)
 - Runtime isolation: own backend on 8003, own frontend on 3003. Never touch
