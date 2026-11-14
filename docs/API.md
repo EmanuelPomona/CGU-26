@@ -137,7 +137,9 @@ anything.
 
 ## 6. Settings and reset
 
-`PUT /api/settings` replaces clock and weights. `POST /api/reset` returns to the
+`PUT /api/settings` replaces clock and weights. Defaults after start and reset:
+clock 480 (8:00 AM), weights reliability 35, cost 20, emissions 20, community 15,
+driver 10 (the reference prototype's values). `POST /api/reset` returns to the
 clean normal day.
 
 ## 7. Feed candidates (nice-to-have)
