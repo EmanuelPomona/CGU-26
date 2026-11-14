@@ -1,7 +1,7 @@
 ---
 id: TASK-004
 title: Options scoring decisions and supervisor update
-status: READY
+status: REVIEW
 owner: backend
 branch: agent/backend
 priority: HIGH

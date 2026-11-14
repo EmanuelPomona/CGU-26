@@ -1,7 +1,7 @@
 ---
 id: TASK-003
 title: Disruption lifecycle and verification
-status: READY
+status: REVIEW
 owner: backend
 branch: agent/backend
 priority: HIGH
