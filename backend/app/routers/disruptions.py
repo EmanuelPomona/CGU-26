@@ -59,7 +59,7 @@ def _record(body: DisruptionCreate, ident: str) -> dict:
     k = body.kind
     area_kind = k in ("slowdown", "closure", "hazard")
     d = {
-        "id": ident, "kind": k, "label": body.label or _label(body), "source": body.source,
+        "id": ident, "kind": k, "label": (body.label or "").strip() or _label(body), "source": body.source,
         "verification": "unverified", "confidence": body.confidence,
         "area": body.area.model_dump() if area_kind else None,
         "slowdown_factor": body.slowdown_factor if k == "slowdown" else None,

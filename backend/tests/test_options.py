@@ -78,7 +78,8 @@ def test_spare_committed_by_another_decision_is_not_offered(client):
 
 
 def test_swap_has_collateral(client):
-    add_preset(client, "close60", "confirmed")
+    add_preset(client, "fire", "confirmed")  # C-104's driver goes over hours: a swap is offered
+    assert any(x["kind"] == "swap_truck" for x in options(client, "C-104")["options"])
     for sid in SEED:
         for x in options(client, sid)["options"]:
             if x["kind"] == "swap_truck":

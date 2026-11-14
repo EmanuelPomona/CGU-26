@@ -40,7 +40,7 @@ def pick_suggestion(scored, weights: dict, meta) -> tuple[str | None, str]:
         return None, ("No feasible response was found: every option lacks a truck, exceeds driver hours, "
                       "or has no appointment slot. Escalate to your supervisor before acting.")
     title = titles.get(best["id"], best.get("title", best["id"]))
-    return best["id"], (f"Suggested: {title}. It has the highest weighted score ({round(best['score'])} of 100) "
+    return best["id"], (f"Suggested: {title}. It has the highest weighted score ({int(best['score'] + 0.5)} of 100) "
                         f"among the feasible options, using the rule-based score with your weights: "
                         f"{weights_text(weights)}. The weights move the suggestion, never the facts. "
                         f"You decide; any option can be chosen with a reason.")

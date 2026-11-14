@@ -101,8 +101,8 @@ def build_options(shipment: dict, ctx) -> dict:
     if base.truck_id and base.truck_id not in out:
         best = None
         for other in w.shipments:
-            if other["id"] == sid:
-                continue
+            if other["id"] == sid or ctx.has_decision(other["id"]):
+                continue  # never override another shipment's recorded decision
             op = ctx.plan_of(other)
             tp = op.truck_id
             if not tp or tp in out:
@@ -118,10 +118,13 @@ def build_options(shipment: dict, ctx) -> dict:
         fixes_hours = best and stay.driver_hours_over > 0 and best[3].driver_hours_over <= 0
         if best and (fixes_hours or best[3].on_time_probability > stay.on_time_probability + 0.05):
             _, other, tp, mine, pb, pa, pa_plan = best
-            mk(f"swap:{other['id']}", "swap_truck", f"Swap trucks with {other['id']}",
-               f"Use {tp} ({w.trucks[tp]['driver_label']}); {other['id']} gets {base.truck_id}.",
-               replace(base, truck_id=tp), mine,
-               collateral=[{"shipment_id": other["id"], "before": pb, "after": pa, "plan": pa_plan}])
+            o = mk(f"swap:{other['id']}", "swap_truck", f"Swap trucks with {other['id']}",
+                   f"Use {tp} ({w.trucks[tp]['driver_label']}); {other['id']} gets {base.truck_id}.",
+                   replace(base, truck_id=tp), mine,
+                   collateral=[{"shipment_id": other["id"], "before": pb, "after": pa, "plan": pa_plan}])
+            if pa.driver_hours_over > pb.driver_hours_over + 1e-9:
+                o["feasible"] = False
+                o["infeasible_reason"] = f"The swap would push {other['id']}'s driver over the shift hours limit."
 
     # reschedule: first shift reaching 0.85 on-time probability
     free = wh["capacity"] - wh["booked"]

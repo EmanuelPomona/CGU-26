@@ -142,3 +142,71 @@ def test_reset_after_full_flow_equals_fresh_start(client):
     assert client.post("/api/reset").json() == fresh
     assert client.post("/api/disruptions", json={"kind": "closure", "area": {"lat": 34, "lng": -117.88,
                                                  "radius_km": 2}}).json()["disruptions"][0]["id"] == "D-1"
+
+
+def assert_no_truck_twice(board):
+    trucks = [s["current"]["truck_id"] for s in board["shipments"] if s["current"]["truck_id"]]
+    assert len(trucks) == len(set(trucks)), trucks
+
+
+def _swap_c104(client):
+    add_preset(client, "fire", "confirmed")
+    swap = next(x for x in options(client, "C-104")["options"] if x["kind"] == "swap_truck")
+    r = decide(client, "C-104", swap["id"], None if swap["suggested"] else "swap to stay within hours")
+    assert r.status_code == 201
+    return r.json()["decision"], swap["collateral"][0]["shipment_id"]
+
+
+def test_new_decision_on_swapped_shipment_requires_undo_first(client):
+    d, partner = _swap_c104(client)
+    for sid in ("C-104", partner):
+        r = decide(client, sid, "keep", "change of plan")
+        assert r.status_code == 409, r.text
+        assert r.json()["error"] == "option_infeasible" and d["id"] in r.json()["message"]
+    b = client.get("/api/board").json()
+    assert_no_truck_twice(b)
+    assert [x["id"] for x in b["decisions"]] == [d["id"]]
+
+
+def test_swap_not_offered_with_partner_that_has_a_decision(client):
+    add_preset(client, "fire", "confirmed")
+    swap = next(x for x in options(client, "C-104")["options"] if x["kind"] == "swap_truck")
+    partner = swap["collateral"][0]["shipment_id"]
+    po = options(client, partner)
+    alt = next(x for x in po["options"] if x["kind"] != "keep" and x["feasible"])
+    assert decide(client, partner, alt["id"], None if alt["suggested"] else "partner's own choice").status_code == 201
+    ids = [x["id"] for x in options(client, "C-104")["options"]]
+    assert swap["id"] not in ids
+    r = decide(client, "C-104", swap["id"], "try the swap anyway")
+    assert r.status_code == 409
+    assert len(client.get("/api/board").json()["decisions"]) == 1
+
+
+def test_swap_infeasible_when_partner_driver_would_go_further_over(client):
+    add_preset(client, "fire", "confirmed")
+    client.post("/api/disruptions", json={"kind": "pickup_delay", "shipment_id": "C-101", "delay_min": 480})
+    client.patch("/api/disruptions/D-2", json={"verification": "confirmed"})
+    swaps = [x for x in options(client, "C-104")["options"] if x["kind"] == "swap_truck"]
+    worse = [x for x in swaps if x["collateral"][0]["after"]["driver_hours_over"]
+             > x["collateral"][0]["before"]["driver_hours_over"]]
+    assert worse, "scenario must produce a swap that pushes the partner further over hours"
+    for x in worse:
+        assert not x["feasible"] and "hours" in x["infeasible_reason"] and not x["suggested"]
+
+
+def test_whitespace_reason_and_label_are_treated_as_absent(client):
+    add_preset(client, "close60", "confirmed")
+    o = options(client, "C-103")
+    d = decide(client, "C-103", o["suggested_option_id"], "     ").json()["decision"]
+    assert d["reason"] is None
+    b = client.post("/api/disruptions", json={"kind": "closure", "label": "    ",
+                                              "area": {"lat": 34.0, "lng": -117.88, "radius_km": 2}}).json()
+    assert b["disruptions"][-1]["label"].strip()
+
+
+def test_before_line_handles_missing_truck(client):
+    add_preset(client, "trucks35", "confirmed")
+    o = options(client, "C-103")
+    msg = decide(client, "C-103", o["suggested_option_id"]).json()["decision"]["supervisor_update"]
+    before = next(l for l in msg.splitlines() if l.startswith("Before this decision"))
+    assert "no truck available" in before

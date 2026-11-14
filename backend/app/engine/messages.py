@@ -43,7 +43,10 @@ def supervisor_update(shipment, opt, before, disruptions, reason, w) -> str:
         lines.append(f"New estimated arrival: {fmt_clock(e.eta_min)}, window {fmt_clock(e.appt_start_min)} to "
                      f"{fmt_clock(e.appt_end_min)} ({status_word(e.status)}, "
                      f"{round(e.on_time_probability * 100)}% on-time probability).")
-    lines.append(f"Before this decision: estimated arrival {fmt_clock(before.eta_min)}, {status_word(before.status)}.")
+    if before.unavailable:
+        lines.append("Before this decision: no truck available, at risk.")
+    else:
+        lines.append(f"Before this decision: estimated arrival {fmt_clock(before.eta_min)}, {status_word(before.status)}.")
     d = opt["delta"]
     lines.append(f"Versus keeping the plan: {d['miles']:+.1f} mi, {d['co2_kg']:+.1f} kg CO2 (estimated), "
                  f"${d['cost_usd']:+.0f} cost (estimated).")

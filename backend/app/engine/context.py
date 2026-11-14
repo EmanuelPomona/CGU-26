@@ -20,5 +20,8 @@ class Ctx:
     def plan_of(self, shipment):
         return plan_in_force(self.store, shipment)
 
+    def has_decision(self, shipment_id: str) -> bool:
+        return shipment_id in self.store.plans
+
     def committed_trucks(self, shipment_id: str) -> set:
         return {e["plan"].truck_id for sid, e in self.store.plans.items() if sid != shipment_id and e["plan"].truck_id}

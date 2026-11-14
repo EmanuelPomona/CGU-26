@@ -44,18 +44,27 @@ def create_decision(body: DecisionCreate) -> dict:
         if not opt["feasible"]:
             raise ApiError(409, "option_infeasible", f"Option {body.option_id!r} is not feasible: {opt['infeasible_reason']}")
         was_suggested = opt["id"] == res["suggested_option_id"]
-        reason = body.reason.strip() if body.reason else None
+        reason = (body.reason or "").strip() or None
         if not was_suggested and not reason:
             raise validation("A reason is required when choosing an option other than the suggested one.", "reason")
+
+        for sid in [s["id"]] + [c["shipment_id"] for c in opt["collateral"]]:
+            entry = store.plans.get(sid)
+            if not entry:
+                continue
+            old = next(d for d in store.decisions if d["id"] == entry["decision_id"])
+            if old["also_affects"] or sid != s["id"]:
+                raise ApiError(409, "option_infeasible",
+                               f"{sid} is part of decision {old['id']} ({old['option_title']}). "
+                               f"Undo {old['id']} first.")
 
         before = evaluate(s, plan_in_force(store, s), ctx.conditions, w, ctx.clock)
         dec_id = f"DEC-{store.next_decision}"
         seq = store.next_decision
         store.next_decision += 1
-        # one decision in force per shipment: replace earlier ones touching this shipment or its swap partner
-        touched = {s["id"]} | {c["shipment_id"] for c in opt["collateral"]}
-        for old in {e["decision_id"] for sid, e in store.plans.items() if sid in touched}:
-            _remove_decision(old)
+        # one decision in force per shipment: a plain earlier decision for this shipment is replaced
+        if s["id"] in store.plans:
+            _remove_decision(store.plans[s["id"]]["decision_id"])
         store.plans[s["id"]] = {"plan": opt["plan"], "decision_id": dec_id}
         for c in opt["collateral"]:
             store.plans[c["shipment_id"]] = {"plan": c["plan"], "decision_id": dec_id}
