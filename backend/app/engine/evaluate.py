@@ -5,6 +5,7 @@ Full precision here; rounding happens only in `public()` at the API boundary.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
 from app.engine import constants as K
@@ -173,8 +174,7 @@ class Evaluation:
 
 
 def round_half_up(x: float) -> int:
-    import math
-    return int(math.floor(x + 0.5))
+    return math.floor(x + 0.5)
 
 
 def evaluate(shipment: dict, plan: Plan, conditions: Conditions, world, clock_min: float) -> Evaluation:
@@ -236,9 +236,9 @@ def evaluate(shipment: dict, plan: Plan, conditions: Conditions, world, clock_mi
             cong_mi += ex.meters / K.MI
         else:
             blocked_p = max(blocked_p, min(1.0, c.p))
-        if c.kind == "hazard" and hav((c.lat, c.lng), (wh["lat"], wh["lng"])) <= c.radius_km * 1000:
-            if "Destination inside affected area" not in flags:
-                flags.append("Destination inside affected area")
+        if (c.kind == "hazard" and hav((c.lat, c.lng), (wh["lat"], wh["lng"])) <= c.radius_km * 1000
+                and "Destination inside affected area" not in flags):
+            flags.append("Destination inside affected area")
 
     # 4. arrival
     block_min = blocked_p * K.BLOCK_PENALTY_MIN

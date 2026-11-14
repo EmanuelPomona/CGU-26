@@ -1,7 +1,7 @@
 """Validate real payloads against components.schemas of docs/openapi.yaml (JSON Schema 2020-12)."""
 from __future__ import annotations
 
-from functools import lru_cache
+from functools import cache, lru_cache
 from pathlib import Path
 
 import yaml
@@ -15,7 +15,7 @@ def _spec() -> dict:
     return yaml.safe_load(SPEC.read_text())
 
 
-@lru_cache(maxsize=None)
+@cache
 def _validator(schema_name: str) -> Draft202012Validator:
     spec = _spec()
     if schema_name not in spec["components"]["schemas"]:

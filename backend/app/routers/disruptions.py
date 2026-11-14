@@ -45,12 +45,14 @@ def _label(body: DisruptionCreate) -> str:
     k = body.kind
     if k in KIND_WORD:
         a = body.area
+        assert a is not None  # guaranteed by _require
         extra = f" x{body.slowdown_factor:g}" if k == "slowdown" else ""
         return f"{KIND_WORD[k]}{extra} at {a.lat:.3f}, {a.lng:.3f} ({a.radius_km:g} km)"
     if k == "pickup_delay":
         return f"Pickup delay +{body.delay_min} min on {body.shipment_id}"
     if k == "truck_out":
-        return f"Truck(s) {', '.join(body.truck_ids)} out of service"
+        return f"Truck(s) {', '.join(body.truck_ids or [])} out of service"
+    assert body.warehouse_id is not None and body.capacity_cut is not None  # guaranteed by _require
     name = store.world.warehouses[body.warehouse_id]["name"]
     return f"{name} docks cut by {round(body.capacity_cut * 100)}%"
 
@@ -61,11 +63,11 @@ def _record(body: DisruptionCreate, ident: str) -> dict:
     d = {
         "id": ident, "kind": k, "label": (body.label or "").strip() or _label(body), "source": body.source,
         "verification": "unverified", "confidence": body.confidence,
-        "area": body.area.model_dump() if area_kind else None,
+        "area": body.area.model_dump() if area_kind and body.area else None,
         "slowdown_factor": body.slowdown_factor if k == "slowdown" else None,
         "shipment_id": body.shipment_id if k == "pickup_delay" else None,
         "delay_min": body.delay_min if k == "pickup_delay" else None,
-        "truck_ids": list(dict.fromkeys(body.truck_ids)) if k == "truck_out" else [],
+        "truck_ids": list(dict.fromkeys(body.truck_ids or [])) if k == "truck_out" else [],
         "warehouse_id": body.warehouse_id if k == "dock_cut" else None,
         "capacity_cut": body.capacity_cut if k == "dock_cut" else None,
         "affected_shipment_ids": [],

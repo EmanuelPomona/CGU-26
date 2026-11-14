@@ -47,7 +47,7 @@ def test_keep_delta_is_zero_and_delta_is_option_minus_keep(client):
 def test_suggestion_is_single_and_feasible(client):
     for pid in presets(client):
         client.post("/api/reset")
-        b, _ = add_preset(client, pid)
+        add_preset(client, pid)
         for sid in SEED:
             o = options(client, sid)
             sug = [x for x in o["options"] if x["suggested"]]

@@ -2,7 +2,14 @@
 from __future__ import annotations
 
 from app.engine import constants as K
-from app.engine.evaluate import Conditions, conditions_from, evaluate, original_plan, round_half_up, summarize
+from app.engine.evaluate import (
+    Conditions,
+    conditions_from,
+    evaluate,
+    original_plan,
+    round_half_up,
+    summarize,
+)
 from app.engine.geo import exposure
 
 

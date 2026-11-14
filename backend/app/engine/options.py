@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from app.engine import constants as K
-from app.engine.evaluate import Plan, evaluate, fmt_hm, round_half_up
+from app.engine.evaluate import evaluate, fmt_hm, round_half_up
 from app.engine.scoring import overall, pick_suggestion, score_parts
 
 UNVERIFIED_NOTE = "Based on an unverified report: confirm before acting."

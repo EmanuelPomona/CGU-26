@@ -1,6 +1,7 @@
 """The single Error shape for request-body failures."""
 from tests.contract import assert_matches
 
+
 def test_malformed_json_is_422_in_error_shape(client):
     r = client.put("/api/settings", content=b"{not json", headers={"Content-Type": "application/json"})
     assert r.status_code == 422

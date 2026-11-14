@@ -38,8 +38,8 @@ try:  # macOS python.org builds ship without a CA bundle; certifi supplies one
     SSL_CTX = ssl.create_default_context(cafile=certifi.where())
 except ImportError:  # pragma: no cover
     SSL_CTX = ssl.create_default_context()
-HWY_REF = re.compile(r"^(I|SR|US|CA|HWY)[ -]?\d+", re.I)
-HWY_NAME = re.compile(r"(freeway|fwy|expressway|highway|turnpike)", re.I)
+HWY_REF = re.compile(r"^(I|SR|US|CA|HWY)[ -]?\d+", re.IGNORECASE)
+HWY_NAME = re.compile(r"(freeway|fwy|expressway|highway|turnpike)", re.IGNORECASE)
 
 
 def hav(a, b) -> float:

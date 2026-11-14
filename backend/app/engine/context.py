@@ -2,14 +2,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from app.engine.board import plan_in_force
 from app.engine.evaluate import conditions_from
 
+if TYPE_CHECKING:
+    from app.state import Store
+
 
 @dataclass
 class Ctx:
-    store: object
+    store: Store
 
     def __post_init__(self):
         self.world = self.store.world

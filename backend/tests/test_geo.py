@@ -1,5 +1,4 @@
 """Geometry primitives. Expected values are hand-computed in the comments."""
-import math
 
 import pytest
 
