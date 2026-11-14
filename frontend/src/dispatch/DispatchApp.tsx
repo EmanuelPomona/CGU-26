@@ -7,6 +7,8 @@ import {
 import type { Board, Decision, Disruption, Network, OptionsResponse, Preset, ResponseOption, ShipmentRow } from '../api/types';
 import { useBoard } from '../api/useBoard';
 import { DispatchMap, type Verdict, type View } from './DispatchMap';
+import { ObstaclePalette } from './ObstaclePalette';
+import type { ObstacleType } from './obstacleCatalog';
 import { BAD, GOOD, INK, OBJ, ONROUTE, PROB, ROLE, ROLE_ORDER, fatLbl, type RoleKey, type Tag } from './data';
 import './dispatch.css';
 
@@ -175,6 +177,7 @@ export default function DispatchApp() {
   const [sideTab, setSideTab] = useState<'chat' | 'explain'>('chat');
   const [driverMsgs, setDriverMsgs] = useState<Record<string, Msg[]>>({});
   const [legendOpen, setLegendOpen] = useState(false);
+  const [placeType, setPlaceType] = useState<ObstacleType | null>(null);
   const [toastText, setToastText] = useState('');
   const [copied, setCopied] = useState(false);
   const toastTimer = useRef<number | undefined>(undefined);
@@ -439,6 +442,9 @@ export default function DispatchApp() {
           onVerdict={verdict}
         />
         <button id="expand" onClick={() => setView('map')}>Expand map</button>
+        {view !== 'net' && (
+          <ObstaclePalette selected={placeType} onSelect={setPlaceType} disabled={!board} />
+        )}
         {view === 'map' && board && (
           <div className="cmpfloat">
             <Compare board={board} />

@@ -189,3 +189,16 @@ h4:first-child{margin-top:0}
 .scripted{display:inline-block;border:1px dashed var(--ink);border-radius:4px;padding:.15rem .6rem;font:500 .78rem var(--mono);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.9rem}
 textarea.draft{width:100%;min-height:9rem;margin-top:.6rem;font:400 .9rem/1.4 var(--mono);border:1px solid var(--line);border-radius:6px;padding:.5rem;resize:vertical}
 .alert form,.alert label{display:block}
+
+/* drag-drop obstacle palette */
+.obstacle-palette{position:absolute;z-index:900;left:1rem;top:1rem;max-width:min(22rem,70vw);pointer-events:auto}
+.dapp.work .obstacle-palette{left:.5rem;top:.5rem;max-width:100%}
+.obstacle-palette-label{font:500 .72rem var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--mute);margin-bottom:.35rem}
+.obstacle-palette-chips{display:flex;flex-wrap:wrap;gap:.35rem}
+.obstacle-chip{border:1px solid var(--ink);background:#fff;color:var(--ink);border-radius:4px;padding:.35rem .7rem;font:500 .85rem var(--sans);cursor:grab;user-select:none}
+.obstacle-chip:hover{background:var(--soft)}
+.obstacle-chip.on{background:var(--ink);color:#fff;cursor:crosshair}
+.obstacle-chip:active{cursor:grabbing}
+.obstacle-palette.is-disabled .obstacle-chip{opacity:.45;cursor:not-allowed}
+.obstacle-palette-hint{margin-top:.4rem;font:400 .78rem var(--mono);color:var(--mute)}
+.obstacle-chip:focus-visible{outline:2px solid #4c8dff;outline-offset:2px}
