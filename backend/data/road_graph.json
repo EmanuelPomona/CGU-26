@@ -287,6 +287,60 @@
       "lat": 34.18,
       "lng": -118.3,
       "kind": "junction"
+    },
+    {
+      "id": "TRK_T1",
+      "lat": 33.77,
+      "lng": -118.2,
+      "kind": "truck"
+    },
+    {
+      "id": "TRK_T2",
+      "lat": 33.75,
+      "lng": -118.29,
+      "kind": "truck"
+    },
+    {
+      "id": "TRK_T3",
+      "lat": 33.79,
+      "lng": -118.28,
+      "kind": "truck"
+    },
+    {
+      "id": "TRK_T4",
+      "lat": 33.765,
+      "lng": -118.205,
+      "kind": "truck"
+    },
+    {
+      "id": "TRK_T5",
+      "lat": 33.745,
+      "lng": -118.265,
+      "kind": "truck"
+    },
+    {
+      "id": "TRK_T6",
+      "lat": 33.76,
+      "lng": -118.21,
+      "kind": "truck"
+    },
+    {
+      "id": "TRK_T7",
+      "lat": 33.775,
+      "lng": -118.225,
+      "kind": "truck"
+    },
+    {
+      "id": "TRK_T8",
+      "lat": 33.78,
+      "lng": -118.27,
+      "kind": "truck"
+    },
+    {
+      "id": "TRK_T9",
+      "lat": 33.83,
+      "lng": -118.22,
+      "kind": "truck"
     }
   ],
   "edges": [
@@ -1505,6 +1559,150 @@
       "length_m": 9627.0,
       "travel_s": 391.5,
       "hwy": true
+    },
+    {
+      "id": "E153",
+      "u": "TRK_T1",
+      "v": "POLB",
+      "length_m": 2585.4,
+      "travel_s": 206.6,
+      "hwy": false
+    },
+    {
+      "id": "E154",
+      "u": "POLB",
+      "v": "TRK_T1",
+      "length_m": 2585.4,
+      "travel_s": 206.6,
+      "hwy": false
+    },
+    {
+      "id": "E155",
+      "u": "TRK_T2",
+      "v": "POLA",
+      "length_m": 1771.7,
+      "travel_s": 141.5,
+      "hwy": false
+    },
+    {
+      "id": "E156",
+      "u": "POLA",
+      "v": "TRK_T2",
+      "length_m": 1771.7,
+      "travel_s": 141.5,
+      "hwy": false
+    },
+    {
+      "id": "E157",
+      "u": "TRK_T3",
+      "v": "J_405S",
+      "length_m": 4997.0,
+      "travel_s": 399.2,
+      "hwy": false
+    },
+    {
+      "id": "E158",
+      "u": "J_405S",
+      "v": "TRK_T3",
+      "length_m": 4997.0,
+      "travel_s": 399.2,
+      "hwy": false
+    },
+    {
+      "id": "E159",
+      "u": "TRK_T4",
+      "v": "POLB",
+      "length_m": 1798.5,
+      "travel_s": 143.7,
+      "hwy": false
+    },
+    {
+      "id": "E160",
+      "u": "POLB",
+      "v": "TRK_T4",
+      "length_m": 1798.5,
+      "travel_s": 143.7,
+      "hwy": false
+    },
+    {
+      "id": "E161",
+      "u": "TRK_T5",
+      "v": "POLA",
+      "length_m": 1483.5,
+      "travel_s": 118.5,
+      "hwy": false
+    },
+    {
+      "id": "E162",
+      "u": "POLA",
+      "v": "TRK_T5",
+      "length_m": 1483.5,
+      "travel_s": 118.5,
+      "hwy": false
+    },
+    {
+      "id": "E163",
+      "u": "TRK_T6",
+      "v": "POLB",
+      "length_m": 1024.7,
+      "travel_s": 81.9,
+      "hwy": false
+    },
+    {
+      "id": "E164",
+      "u": "POLB",
+      "v": "TRK_T6",
+      "length_m": 1024.7,
+      "travel_s": 81.9,
+      "hwy": false
+    },
+    {
+      "id": "E165",
+      "u": "TRK_T7",
+      "v": "POLB",
+      "length_m": 2475.0,
+      "travel_s": 197.7,
+      "hwy": false
+    },
+    {
+      "id": "E166",
+      "u": "POLB",
+      "v": "TRK_T7",
+      "length_m": 2475.0,
+      "travel_s": 197.7,
+      "hwy": false
+    },
+    {
+      "id": "E167",
+      "u": "TRK_T8",
+      "v": "POLA",
+      "length_m": 5020.1,
+      "travel_s": 401.1,
+      "hwy": false
+    },
+    {
+      "id": "E168",
+      "u": "POLA",
+      "v": "TRK_T8",
+      "length_m": 5020.1,
+      "travel_s": 401.1,
+      "hwy": false
+    },
+    {
+      "id": "E169",
+      "u": "TRK_T9",
+      "v": "J_CAR",
+      "length_m": 0.0,
+      "travel_s": 0.0,
+      "hwy": false
+    },
+    {
+      "id": "E170",
+      "u": "J_CAR",
+      "v": "TRK_T9",
+      "length_m": 0.0,
+      "travel_s": 0.0,
+      "hwy": false
     }
   ]
 }
