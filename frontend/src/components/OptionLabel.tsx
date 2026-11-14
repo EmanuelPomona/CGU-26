@@ -131,11 +131,26 @@ export function OptionLabel({ option: o, normal, scale, isKeep, action, picked, 
           <p className="ol-none">No added burden beyond the plan.</p>
         ) : (
           <ul>
-            {o.burdens.map((b, i) => (
-              <li key={i}>
-                <strong>{STAKEHOLDER[b.stakeholder]}.</strong> {b.text}
-              </li>
-            ))}
+            {o.burdens.map((b, i) => {
+              const word = STAKEHOLDER[b.stakeholder];
+              // The server may already lead with the stakeholder ("Residents and schools: ..."); never print it twice.
+              const named = b.text.toLowerCase().startsWith(word.toLowerCase());
+              const colon = named ? b.text.indexOf(':') : -1;
+              return (
+                <li key={i}>
+                  {named && colon > 0 ? (
+                    <>
+                      <strong>{b.text.slice(0, colon + 1)}</strong>
+                      {b.text.slice(colon + 1)}
+                    </>
+                  ) : (
+                    <>
+                      <strong>{word}.</strong> {b.text}
+                    </>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
         {o.collateral.length > 0 && (
