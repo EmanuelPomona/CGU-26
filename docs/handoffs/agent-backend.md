@@ -201,3 +201,75 @@ $ st run docs/openapi.yaml --url http://localhost:8012 --checks all --max-exampl
 
 ### Commit
 `67dc912` (code). This handoff, the status update and the TASK-005 status are in the commit that follows it.
+
+## HANDOFF-3 — agent/backend — 2026-11-14
+
+### Summary
+TASK-006 is done: every `Option` now carries `roles`, as defined in `docs/openapi.yaml` and docs/API.md section 4 (ADR-007). The code is in commit `967627b`, made after merging `main` (`0a61ee4`).
+
+### Tasks Completed
+TASK-006, all criteria met:
+- **Role pool.** Only feasible `keep` and `reroute` options can win a role:
+  - `efficiency`: lowest `eta_min`
+  - `sustainability`: lowest `co2_kg`
+  - `community`: highest `community_score` among options arriving within 30 minutes of the earliest
+- **Values and ties.** Roles are computed from unrounded engine values. A tie goes to the option that appears first in the response (keep first, then by score).
+- **Coverage.** Each role is held exactly once whenever the pool is not empty. `spare_truck`, `swap_truck`, `reschedule` and every infeasible option get `[]`. When the pool is empty (for example `trucks35` for C-103 or C-105), every option gets `[]`.
+- **Tests.** `test_roles.py` was written first and seen failing (9 failures: no `app.engine.roles`, no `roles` key). It covers:
+  - three different winners
+  - one option winning all three roles
+  - the 30-minute exclusion (31 min excluded, exactly 30 min eligible)
+  - `keep` infeasible
+  - all options infeasible
+  - ties
+  - unrounded values deciding the winner
+  - `assert_matches("OptionsResponse")` plus the role rules for all 7 shipments, on the normal day and under every preset (confirmed)
+  - identical results on a repeated call
+
+### Normal-day role holders (08:00, default weights)
+| Shipment | Truck | Efficiency | Sustainability | Community | Different winners |
+|---|---|---|---|---|---|
+| C-101 | T2 | keep (9:21, 69.7 kg, 92) | keep | keep | 1 |
+| C-102 | T1 | keep (9:23, 64.3 kg, 93) | keep | keep | 1 |
+| C-103 | T3 | keep (10:33, 193.0 kg, 95) | **reroute:POLA-ONT-2** (10:38, 189.6 kg, 88) | keep | 2 |
+| C-104 | T4 | keep (11:11, 204.0 kg, 90) | keep | **reroute:POLB-FON-1** (11:16, 218.1 kg, 90*) | 2 |
+| C-105 | T5 | keep (9:26, 84.0 kg, 95) | keep | keep | 1 |
+| C-106 | T6 | keep (11:27, 117.9 kg, 92) | keep | keep | 1 |
+| C-107 | T7 | keep (10:10, 168.6 kg, 93) | keep | **reroute:POLB-ONT-1** (10:12, 174.1 kg, 94) | 2 |
+
+\* C-104: both options show community 90 after rounding, but the reroute wins on the unrounded value. A viewer may find that confusing; C-107 shows the difference clearly (93 vs 94).
+
+**No shipment has three different winners, on the normal day, under any preset (unverified or confirmed), or at any clock from 6:00 AM to 6:00 PM in 30-minute steps.** I searched all of them. The cause is in the data, not a bug: the pool holds only `keep` plus the 2 reroutes that rule 9 offers, and on the bundled OSRM routes the earliest route is also the lowest-CO2 or best-community one. I did not tune data or constants. For the demo, use **C-103** (keep is efficiency and community, reroute POLA-ONT-2 is sustainability) or **C-107** (keep is efficiency and sustainability, reroute POLB-ONT-1 is community). If three distinct cards are required, the manager could widen the role pool to every bundled route alternative for the pair (3 to 5 per pair). That would need a contract change; ask and I'll check whether it produces three different winners.
+
+### Files Changed
+- `backend/app/engine/roles.py` (new), `backend/app/engine/options.py` (calls `assign_roles` after ordering and serializes `roles`), `backend/tests/test_roles.py` (new)
+
+### Contracts
+Implements `Option.roles` exactly as written on main. No other change.
+
+### Skills Used
+| Skill | Stage invoked | What it actually changed |
+|---|---|---|
+| superpowers:verification-before-completion | after `967627b`, before this handoff | Fresh pytest, ruff, mypy and live-service check below |
+
+TDD: the tests were written and seen failing first, following the TDD skill loaded earlier in this session. It was not re-invoked.
+
+### Verification
+```
+$ cd backend && python3 -m pytest -q
+151 passed in 2.83s
+$ ruff check app tests scripts       -> All checks passed!
+$ mypy app --ignore-missing-imports  -> Success: no issues found in 24 source files
+$ curl -fsS localhost:8012/api/shipments/C-103/options   # live service, auto-reloaded
+[('keep', ['efficiency', 'community']), ('reroute:POLA-ONT-2', ['sustainability']), ('reroute:POLA-ONT-1', [])]
+```
+
+### What Was NOT Verified
+- Not checked against the new Dispatch frontend (TASK-107) or in a browser.
+- schemathesis was not re-run for this change. The roles field is checked by `assert_matches` on every options response in the tests.
+
+### Known Issues
+- No three-way split exists in the current data (see above).
+
+### Commit
+`967627b` (code). This handoff and the TASK-006 status are in the commit that follows it.
