@@ -1,7 +1,7 @@
 ---
 id: TASK-103
-title: Map view
-status: READY
+title: SUPERSEDED by TASK-107 (Map view)
+status: BACKLOG
 owner: frontend
 branch: agent/frontend
 priority: HIGH
@@ -13,6 +13,8 @@ blocked_on: ""
 # TASK-103 — Map view
 
 ## Objective
+
+**Superseded.** The owner replaced this UI with the Dispatch mockup (ADR-007). Do not build this. See TASK-107.
 
 Build the Leaflet map in the nautical-chart manner: a quiet base on which only
 routes, destinations, hazards and sensitive places carry ink, kept in sync with

@@ -42,6 +42,8 @@ frame.
 
 ## Notes
 
+- 2026-11-14: the shell, tokens and layout criteria here are superseded by the Dispatch mockup (ADR-007). The generated types, `client.ts` and `ApiError` remain in force and are reused by TASK-107.
+
 Read `docs/DESIGN_BRIEF.md`, `docs/DESIGN_CONSTRAINTS.md`, `docs/API.md` and `docs/openapi.yaml` first. Run the mandatory design skills in `docs/SKILL_ROUTING.md` before major UI. Commit after each passing step (protocol section 24).
 
 - Design skills (`ecc:frontend-design-direction`, `frontend-design:frontend-design`, `ui-ux-pro-max:ui-ux-pro-max`, `design-taste-frontend`) are invoked in this task, before the shell is styled.

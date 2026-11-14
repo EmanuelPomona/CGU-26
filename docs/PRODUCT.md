@@ -2,8 +2,8 @@
 
 ## Product Name
 
-**Drayline** (working name; "drayage" is the trade word for port-to-warehouse
-trucking). The repository stays `CGUHacks2026`. Renaming is a string change.
+**Dispatch** (the name on the owner's mockup; earlier working name Drayline).
+The repository stays `CGUHacks2026`.
 
 ## Track
 
@@ -87,22 +87,22 @@ By the end of the hackathon, a user must be able to:
 
 ## Primary Demo Flow
 
-1. Open the app. The board shows the **normal day**: 7 shipments, all on time or
-   tight, indicators at baseline.
-2. Click the preset **Road closure (SR-60)**. The map shows the closure, the
-   shipments whose routes cross it turn tight or at risk, and the indicator
-   strip shows normal vs changed.
-3. The verification prompt asks whether the closure is confirmed. Click
-   **Dismiss, road is open**: the shipments return to normal. Click **Undo**,
-   then **Confirm**: they are at risk again, now without the "unverified" mark.
-4. Select the at-risk shipment. The options panel lists keep plan, two reroutes,
-   a spare truck, a later appointment. A reroute that saves the appointment
-   adds miles and may pass schools on local streets; the panel says so.
-5. Choose the recommended option, or override it with another and give a reason.
-6. The supervisor update is drafted; copy it. The decision appears in the log.
-   The indicator strip now shows three columns: normal, changed, after decision.
-7. Open **Method**: every constant, formula, and data source, each tagged
-   simulated, estimated, or public.
+Revised for the Dispatch UI (ADR-007).
+
+1. Open the app on the **Map** view: ports, warehouses, trucks and their routes
+   on the normal day.
+2. Open **To dispatch**, pick a truck, and compare its three route cards:
+   Efficiency, Sustainability, Community, each with arrival, miles, estimated
+   CO2, cost and community score from the backend.
+3. Add the **SR-60 closure**. The affected trucks change status and the normal
+   vs changed comparison appears.
+4. Verify it: dismiss it ("road is open") and the trucks return to normal;
+   restore and confirm it and they are at risk again.
+5. For an affected truck, compare the responses, press **Explain this option**,
+   and choose one. Override the suggestion with a reason if you prefer another.
+6. Copy the drafted supervisor update. Undo is available.
+7. Show **On route** as a scripted example of mid-journey problems and driver
+   messages, and **Network** for warehouse capacity.
 
 ## Must-Have Features
 

@@ -23,8 +23,11 @@ Last updated: 2026-11-14T19:25:00Z
 - [x] 11 task files written, INDEX regenerated (9 READY, 2 BACKLOG)
 - [x] 6 ADRs, docs/handoffs/main.md
 
+- [x] Workers briefed by cross-session message; backend reported TASK-001..005 in REVIEW (unverified by manager)
+- [x] Owner replaced the UI with their Dispatch mockup; owner chose (asked directly): wire core to backend, relabel Ask AI and names, skip all frontend evidence. Recorded as ADR-007, ADR-008, DEBT entries; contract gained Option.roles; TASK-006 and TASK-107 added; TASK-102..106 superseded
+
 ## In progress
-- [ ] Planning complete. Next session on main is Mode B (integration), started fresh.
+- [ ] Waiting on TASK-006 (backend) and TASK-107 (frontend). Next session on main is Mode B (integration), started fresh.
 
 ## Verified
 - Supplied folder contains only GeoAI material (no DPM kit/JSON files); whiteboard is headed "GeoAI" -> ls of the folder, photos
