@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.routing import Match
 
 log = logging.getLogger("drayline")
 
@@ -37,6 +38,16 @@ def _field_from_loc(loc) -> str:
     return ".".join(parts) if parts else "body"
 
 
+def _allowed(request: Request) -> str:
+    """Every method any route serves on this path (Starlette only reports the first route's)."""
+    methods: set[str] = set()
+    for route in request.app.router.routes:
+        match, _ = route.matches(request.scope)
+        if match != Match.NONE and getattr(route, "methods", None):
+            methods |= route.methods
+    return ", ".join(sorted(methods - {"HEAD"}))
+
+
 def install(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     async def _api(_: Request, exc: ApiError):
@@ -53,11 +64,15 @@ def install(app: FastAPI) -> None:
         return JSONResponse(body("validation_error", msg, field), status_code=422)
 
     @app.exception_handler(StarletteHTTPException)
-    async def _http(_: Request, exc: StarletteHTTPException):
+    async def _http(request: Request, exc: StarletteHTTPException):
         if exc.status_code == 404:
             return JSONResponse(body("not_found", "No such resource."), status_code=404)
         if exc.status_code == 405:
-            return JSONResponse(body("not_found", "Method not allowed on this path."), status_code=405)
+            return JSONResponse(body("not_found", "Method not allowed on this path."), status_code=405,
+                                headers={"Allow": _allowed(request)})
+        if exc.status_code == 400:  # Starlette: body could not be decoded at all
+            return JSONResponse(body("validation_error", "Request body could not be read as JSON.", "body"),
+                                status_code=422)
         log.warning("http error %s: %s", exc.status_code, exc.detail)
         return JSONResponse(body("internal_error", "Request could not be handled."), status_code=exc.status_code)
 

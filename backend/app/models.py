@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class Weights(BaseModel):
@@ -25,10 +25,21 @@ class Area(BaseModel):
     radius_km: float = Field(ge=0.5, le=15)
 
 
+class NoExplicitNull(BaseModel):
+    """Optional fields in docs/openapi.yaml are omittable but not nullable: reject an explicit null."""
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def _no_null(cls, v):
+        if v is None:
+            raise ValueError("must be omitted rather than null")
+        return v
+
+
 DisruptionKind = Literal["slowdown", "closure", "hazard", "pickup_delay", "truck_out", "dock_cut"]
 
 
-class DisruptionCreate(BaseModel):
+class DisruptionCreate(NoExplicitNull):
     kind: DisruptionKind
     label: str | None = Field(default=None, max_length=80)
     source: Literal["simulated", "dispatcher", "public_feed"] = "dispatcher"
@@ -42,12 +53,12 @@ class DisruptionCreate(BaseModel):
     capacity_cut: float | None = Field(default=None, ge=0.1, le=1)
 
 
-class DisruptionUpdate(BaseModel):
+class DisruptionUpdate(NoExplicitNull):
     verification: Literal["unverified", "confirmed", "dismissed"]
     note: str | None = Field(default=None, max_length=200)
 
 
-class DecisionCreate(BaseModel):
+class DecisionCreate(NoExplicitNull):
     shipment_id: str
     option_id: str
     reason: str | None = Field(default=None, min_length=3, max_length=300)
