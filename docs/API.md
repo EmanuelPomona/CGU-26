@@ -44,8 +44,11 @@ One shape, `Error` in the YAML: `{ "error": code, "message": text, "field"?: nam
 |---|---|---|
 | 422 | `validation_error` | body fails the schema, a referenced id does not exist in the body (`shipment_id`, `truck_ids`, `warehouse_id`), a kind's required companion field is missing, weights all zero, or `reason` missing on an override. `field` names the offender. |
 | 404 | `not_found` | id in the URL path does not exist |
-| 409 | `option_infeasible` | `POST /api/decisions` names an option that is infeasible or no longer offered under current conditions |
+| 409 | `option_infeasible` | `POST /api/decisions` names an option that is infeasible or no longer offered under current conditions, or the shipment is one side of a truck swap decided earlier (message says which decision to undo first) |
 | 500 | `internal_error` | anything unexpected; message is generic |
+
+Optional request fields are **omitted** when not used. Sending an explicit JSON
+`null` for one is a 422.
 
 FastAPI's default 422 body is **not** this shape. Backend must install an
 exception handler that converts it.
@@ -202,6 +205,16 @@ Rules, in order:
     standard; say so in `detail`). `new_at_risk`: changed at-risk count exceeds
     normal. `driver_hours`: any driver over hours in decided. `unverified_inputs`:
     any unverified disruption is active.
+
+Accepted differences from the reference (decided 2026-11-14 on backend's request):
+
+- A slowdown counts only the part of the route inside its circle, by distance
+  along the geometry. The reference counted whole road segments that touched it.
+- `swap_truck` is also offered when the current driver would be over hours, and
+  is infeasible when the swap pushes the partner's driver over hours.
+- A truck swap locks both shipments: a swap is never offered with a partner that
+  already has a decision, and a new decision on either side of an existing swap
+  is refused with 409 until that swap is undone. One truck never serves two loads.
 
 Rounding at the API boundary: `*_min` integers are rounded half up; miles, cost,
 CO2, hours to 1 decimal; probabilities to 2 decimals; scores to whole numbers.

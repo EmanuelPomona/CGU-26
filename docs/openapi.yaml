@@ -271,7 +271,7 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     Conflict:
-      description: the request is well-formed but cannot be applied in the current state
+      description: the request is well-formed but cannot be applied in the current state (infeasible or stale option, or a truck swap must be undone first)
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
