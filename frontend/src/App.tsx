@@ -35,7 +35,7 @@ export default function App() {
     const load = () =>
       getNetwork()
         .then((n) => live && setNetwork(n))
-        .catch(() => live && setTimeout(load, 3000));
+        .catch(() => live && setTimeout(load, 2500));
     load();
     return () => {
       live = false;
