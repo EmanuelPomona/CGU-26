@@ -1,0 +1,108 @@
+[
+ {
+  "id": "slow710",
+  "label": "I-710 crash slowdown",
+  "description": "Simulated crash on I-710 near Bell; traffic inside 4 km moves at 1/2.6 speed.",
+  "disruption": {
+   "kind": "slowdown",
+   "label": "I-710 crash slowdown (simulated)",
+   "confidence": 0.9,
+   "area": {
+    "lat": 33.91,
+    "lng": -118.204,
+    "radius_km": 4
+   },
+   "slowdown_factor": 2.6,
+   "source": "simulated"
+  }
+ },
+ {
+  "id": "close60",
+  "label": "Road closure (SR-60)",
+  "description": "Simulated full closure of SR-60 near Hacienda Heights.",
+  "disruption": {
+   "kind": "closure",
+   "label": "SR-60 full closure (simulated)",
+   "confidence": 0.8,
+   "area": {
+    "lat": 34.0,
+    "lng": -117.88,
+    "radius_km": 2
+   },
+   "source": "simulated"
+  }
+ },
+ {
+  "id": "fire",
+  "label": "Wildfire zone near Fontana",
+  "description": "Simulated wildfire hazard zone near Fontana and Ontario; report is uncertain.",
+  "disruption": {
+   "kind": "hazard",
+   "label": "Wildfire zone near Fontana / Ontario (simulated)",
+   "confidence": 0.6,
+   "area": {
+    "lat": 34.13,
+    "lng": -117.5,
+    "radius_km": 7
+   },
+   "source": "simulated"
+  }
+ },
+ {
+  "id": "flood",
+  "label": "Flooding near Vernon",
+  "description": "Simulated flooding along the LA River near Vernon; report is uncertain.",
+  "disruption": {
+   "kind": "hazard",
+   "label": "Flooding along LA River near Vernon (simulated)",
+   "confidence": 0.5,
+   "area": {
+    "lat": 34.0,
+    "lng": -118.22,
+    "radius_km": 2.5
+   },
+   "source": "simulated"
+  }
+ },
+ {
+  "id": "pickup103",
+  "label": "Pickup delay on C-103",
+  "description": "Terminal hold: container C-103 released 2 hours late.",
+  "disruption": {
+   "kind": "pickup_delay",
+   "label": "Pickup delay +2 h on C-103 (simulated)",
+   "confidence": 0.9,
+   "shipment_id": "C-103",
+   "delay_min": 120,
+   "source": "simulated"
+  }
+ },
+ {
+  "id": "trucks35",
+  "label": "Trucks T3 and T5 out",
+  "description": "Trucks T3 and T5 out of service.",
+  "disruption": {
+   "kind": "truck_out",
+   "label": "Trucks T3 and T5 out of service (simulated)",
+   "confidence": 0.9,
+   "truck_ids": [
+    "T3",
+    "T5"
+   ],
+   "source": "simulated"
+  }
+ },
+ {
+  "id": "docksONT",
+  "label": "Ontario docks at 50%",
+  "description": "Ontario Fulfillment loses half its docks.",
+  "disruption": {
+   "kind": "dock_cut",
+   "label": "Ontario docks at 50% capacity (simulated)",
+   "confidence": 0.9,
+   "warehouse_id": "ONT",
+   "capacity_cut": 0.5,
+   "source": "simulated"
+  }
+ }
+]
