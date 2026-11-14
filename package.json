@@ -1,0 +1,14 @@
+{
+  "name": "cguhacks2026",
+  "private": true,
+  "description": "Drayline: port-to-warehouse dispatch decision support (CGU Hackathon 2026, GeoAI track)",
+  "scripts": {
+    "postinstall": "[ -f frontend/package.json ] && npm --prefix frontend install || true",
+    "dev:backend": "set -a; . ./.env; set +a; cd backend && python3 -m uvicorn app.main:app --host 127.0.0.1 --port $BACKEND_PORT --reload",
+    "dev:frontend": "set -a; . ./.env; set +a; npm --prefix frontend run dev -- --port $FRONTEND_PORT --strictPort",
+    "seed": "set -a; . ./.env; set +a; curl -fsS -X POST http://localhost:$BACKEND_PORT/api/reset >/dev/null && echo 'board reset to the normal day' || echo 'backend not running: seed data loads from backend/data when it starts'",
+    "test:backend": "cd backend && python3 -m pytest -q",
+    "test:frontend": "npm --prefix frontend run test",
+    "test": "npm run test:backend && npm run test:frontend"
+  }
+}
