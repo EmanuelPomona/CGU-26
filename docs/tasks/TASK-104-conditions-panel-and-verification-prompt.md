@@ -1,7 +1,7 @@
 ---
 id: TASK-104
-title: Conditions panel and verification prompt
-status: READY
+title: SUPERSEDED by TASK-107 (Conditions panel and verification prompt)
+status: BACKLOG
 owner: frontend
 branch: agent/frontend
 priority: HIGH
@@ -13,6 +13,8 @@ blocked_on: ""
 # TASK-104 — Conditions panel and verification prompt
 
 ## Objective
+
+**Superseded.** The owner replaced this UI with the Dispatch mockup (ADR-007). Do not build this. See TASK-107.
 
 Let the dispatcher change a condition (preset, or place one on the map), see the
 active disruptions, and answer the verification question for each unverified

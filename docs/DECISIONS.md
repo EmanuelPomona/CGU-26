@@ -227,3 +227,63 @@ care. Why rejected: that is how field drift happens when nobody can ask anybody.
 
 A contract change is one file plus a regeneration. Returning the whole Board on
 each write costs payload size (seven routes of geometry) and saves client logic.
+
+## ADR-007 — The owner's Dispatch mockup is the UI; its core is wired to the backend
+
+Date: 2026-11-14
+
+Status: Accepted (owner decision). Supersedes the design direction in the first DESIGN_BRIEF.
+
+### Context
+
+During the build the owner replaced the planned board UI twice, ending with a
+React port of their own `dispatcher-ui.html` mockup ("Dispatch": Map, To
+dispatch, On route, Network). As committed it runs on hard-coded data and does
+not call the backend, whose engine is built and tested.
+
+### Decision
+
+Dispatch is the product UI. Its Map, To dispatch and Network views, road-status
+overrides, route options and decisions are driven by the backend API. The On
+route view (trucks mid-journey, fatigue, driver chat) stays scripted and is
+labelled as a scripted example. `Option.roles` is added to the contract so the
+three route cards (Efficiency, Sustainability, Community) come from the server.
+
+### Alternatives Considered
+
+Option: demo the mockup alone. Why rejected by the owner: the numbers would be
+invented in the browser, and the brief asks how indicators are calculated.
+
+Option: extend the backend to on-route trucks, fatigue and chat. Why rejected:
+too much new modelling before the deadline.
+
+### Consequences
+
+TASK-102 to TASK-106 are superseded by TASK-107. The appointment strip is
+dropped. "Ask AI" is renamed and its answers come from server text, marked as
+scripted; drivers are shown as "Driver NN" (owner decision, keeps G-6 and G-7).
+
+## ADR-008 — Frontend evidence and tests are waived by the owner
+
+Date: 2026-11-14
+
+Status: Accepted (owner decision)
+
+### Context
+
+Protocol sections 10 and 22 require screenshots at three widths and a console
+log before a frontend can be approved. The owner asked for no further frontend
+tests and, when asked directly, chose to skip screenshots and the console log
+too.
+
+### Decision
+
+No new frontend unit tests, screenshots or console log are required for this
+build.
+
+### Consequences
+
+Under the protocol the reviewer cannot issue APPROVED for the frontend; the
+expected verdict is BLOCKED for lack of runtime evidence, which the owner
+accepts. Recorded in `docs/DEBT.md`. Backend verification is unaffected. The
+slide deck will need screenshots taken by the team by hand.
