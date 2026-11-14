@@ -1,7 +1,7 @@
 ---
 id: TASK-107
 title: Wire the Dispatch UI to the backend
-status: READY
+status: REVIEW
 owner: frontend
 branch: agent/frontend
 priority: HIGH

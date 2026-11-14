@@ -26,8 +26,16 @@ Last updated: 2026-11-14T19:25:00Z
 - [x] Workers briefed by cross-session message; backend reported TASK-001..005 in REVIEW (unverified by manager)
 - [x] Owner replaced the UI with their Dispatch mockup; owner chose (asked directly): wire core to backend, relabel Ask AI and names, skip all frontend evidence. Recorded as ADR-007, ADR-008, DEBT entries; contract gained Option.roles; TASK-006 and TASK-107 added; TASK-102..106 superseded
 
+- [x] Both workers report done (claims, not yet verified by the manager)
+
 ## In progress
-- [ ] Waiting on TASK-006 (backend) and TASK-107 (frontend). Next session on main is Mode B (integration), started fresh.
+- [ ] START A FRESH SESSION ON main FOR MODE B (integration). Inputs:
+  - agent/backend: code c30496a, HANDOFF-3 addendum a4c2ac6. Claims 153 pytest pass, ruff/mypy clean, schemathesis run. TASK-001..006 in REVIEW on its branch.
+  - agent/frontend: HANDOFF-2 at c4825cf. TASK-107 wired Dispatch UI; verified by it against a copy of backend c30496a on port 8001. No new tests/screenshots/console log (ADR-008), no code review of the TASK-107 diff, narrow widths not adapted.
+  - Port 8002 is held by an unrelated app (answers /api/health). Backend worker used 8012. Check with lsof before trusting a port.
+  - Both branches merged main several times; expect docs/tasks status edits and docs/ files to be the likely conflicts. Contract files resolve toward main.
+  - Reviewer (cguhacks2026-reviewer-93) is standing by; will run backend gate first, then a time-boxed frontend walkthrough on 8003/3003. Message it when integration is done.
+  - Demo trucks: C-103 / C-107 (two differing route cards on the normal day; one reroute wins all three after close60 confirmed).
 
 ## Verified
 - Supplied folder contains only GeoAI material (no DPM kit/JSON files); whiteboard is headed "GeoAI" -> ls of the folder, photos
