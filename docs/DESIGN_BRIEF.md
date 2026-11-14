@@ -88,10 +88,10 @@ Google Fonts with system fallbacks; the app must stay legible if fonts fail.
 | hairline rules | `#CFCBC0` | row separators; replaces card borders |
 | action / selected | `#12355B` | buttons, the selected shipment, its route on the map |
 | on time | `#1F6F4A` | freeway-sign green; arrival inside the window |
-| tight | `#A8690F` | amber; inside the window with little slack |
+| tight | `#985F0E` | amber; inside the window with little slack (4.88:1 on panel, 4.51:1 on canvas) |
 | at risk / error | `#B3312A` | signal red; arrival outside the window, and form errors |
 | unverified / needs review | `#4B4FA6` | the only cool accent; reserved for "a human has not confirmed this" |
-| baseline ghost | `#9AA1A8` | the normal-day ETA and route, shown behind the changed one |
+| baseline ghost | `#7C848C` | the normal-day ETA and route, shown behind the changed one (3.51:1 on panel, meets 3:1 for meaningful graphics); the ghost tick is also drawn shorter than the live tick so it does not rely on color |
 
 Every color has a semantic role. Status color always appears with a status word
 and never as the only signal. Check contrast: status text on `#F8F6F0` must
