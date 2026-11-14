@@ -1,11 +1,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import 'leaflet/dist/leaflet.css';
-import './styles/proto.css';
-import App from './App.tsx';
+import DispatchApp from './dispatch/DispatchApp.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <DispatchApp />
   </StrictMode>,
 );
