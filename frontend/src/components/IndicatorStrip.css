@@ -63,3 +63,7 @@
 .ind-checks strong { font-weight: 600; }
 .ind-checks li[data-check='unverified_inputs'] strong { color: var(--unverified); }
 .ind-checks li[data-check='new_at_risk'] strong { color: var(--at-risk); }
+
+.ind-table-t thead th { text-align: right; }
+.ind-table-t tbody tr + tr th, .ind-table-t tbody tr + tr td { border-top: var(--hairline); }
+.ind-table-t .ind-rowhead { width: auto; font-weight: 500; color: var(--ink-2); }

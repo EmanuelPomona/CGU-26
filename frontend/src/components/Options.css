@@ -139,3 +139,9 @@
   .opts-list { grid-template-columns: minmax(0, 1fr); }
   .ol[data-feasible='true'] { cursor: pointer; }
 }
+
+/* In the narrow panel the panel bar already names the shipment. */
+@media (max-width: 1180px) {
+  .region-detail .opts-head h2 { display: none; }
+  .region-detail .opts-head { padding-top: var(--s2); }
+}

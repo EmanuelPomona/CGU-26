@@ -2,6 +2,7 @@
 // each column is a comparison with a formula on the Method page (brief, Justified exceptions).
 import type { Check, IndicatorSet, Indicators } from '../api/types';
 import { num, signed } from '../lib/format';
+import { useMedia } from '../lib/useMedia';
 import './IndicatorStrip.css';
 
 type Key = keyof Indicators;
@@ -23,7 +24,26 @@ interface Props {
   hasDecisions: boolean;
 }
 
+function Cell({ col, values, normal, isNormal }: { col: (typeof COLUMNS)[number]; values: Indicators; normal: Indicators; isNormal: boolean }) {
+  const v = values[col.key];
+  const d = v - normal[col.key];
+  const worse = col.better === 'lower' ? d > 0 : d < 0;
+  const shown = Number(Math.abs(d).toFixed(col.decimals)) !== 0;
+  return (
+    <td>
+      <span className="ind-fig">{col.money ? `$${num(v, 0)}` : num(v, col.decimals)}</span>
+      {!isNormal && shown && (
+        <span className={`ind-delta ${worse ? 'ind-worse' : 'ind-better'}`}>
+          {col.money ? signed(d, '', 0).replace(/^([+\u2212])/, '$1$') : signed(d, col.unit, col.decimals)}
+          <span className="visually-hidden">{worse ? ', worse than normal' : ', better than normal'}</span>
+        </span>
+      )}
+    </td>
+  );
+}
+
 export function IndicatorStrip({ indicators, hasDecisions }: Props) {
+  const narrow = useMedia('(max-width: 640px)');
   const changed = !same(indicators.normal, indicators.changed);
   const rows: Array<{ id: string; label: string; values: Indicators }> = [
     { id: 'normal', label: 'Normal', values: indicators.normal },
@@ -34,48 +54,63 @@ export function IndicatorStrip({ indicators, hasDecisions }: Props) {
 
   return (
     <div className="ind">
-      <table className="ind-table">
-        <caption className="visually-hidden">Indicators: normal day, changed conditions, after decisions</caption>
-        <thead>
-          <tr>
-            <th scope="col" className="ind-rowhead">
-              <span className="visually-hidden">Scenario</span>
-            </th>
-            {COLUMNS.map((c) => (
-              <th key={c.key} scope="col">
-                {c.label}
+      {narrow ? (
+        <table className="ind-table ind-table-t">
+          <caption className="visually-hidden">Indicators by scenario</caption>
+          <thead>
+            <tr>
+              <th scope="col" className="ind-rowhead">
+                <span className="visually-hidden">Indicator</span>
               </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.id} data-row={r.id}>
-              <th scope="row" className="ind-rowhead">
-                {r.label}
-              </th>
-              {COLUMNS.map((c) => {
-                const v = r.values[c.key];
-                const base = indicators.normal[c.key];
-                const d = v - base;
-                const worse = c.better === 'lower' ? d > 0 : d < 0;
-                const shown = Number(Math.abs(d).toFixed(c.decimals)) !== 0;
-                return (
-                  <td key={c.key}>
-                    <span className="ind-fig">{c.money ? `$${num(v, 0)}` : num(v, c.decimals)}</span>
-                    {r.id !== 'normal' && shown && (
-                      <span className={`ind-delta ${worse ? 'ind-worse' : 'ind-better'}`}>
-                        {c.money ? signed(d, '', 0).replace(/^([+−])/, '$1$') : signed(d, c.unit, c.decimals)}
-                        <span className="visually-hidden">{worse ? ', worse than normal' : ', better than normal'}</span>
-                      </span>
-                    )}
-                  </td>
-                );
-              })}
+              {rows.map((r) => (
+                <th key={r.id} scope="col">
+                  {r.label}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {COLUMNS.map((c) => (
+              <tr key={c.key}>
+                <th scope="row" className="ind-rowhead">
+                  {c.label}
+                </th>
+                {rows.map((r) => (
+                  <Cell key={r.id} col={c} values={r.values} normal={indicators.normal} isNormal={r.id === 'normal'} />
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <table className="ind-table">
+          <caption className="visually-hidden">Indicators: normal day, changed conditions, after decisions</caption>
+          <thead>
+            <tr>
+              <th scope="col" className="ind-rowhead">
+                <span className="visually-hidden">Scenario</span>
+              </th>
+              {COLUMNS.map((c) => (
+                <th key={c.key} scope="col">
+                  {c.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.id} data-row={r.id}>
+                <th scope="row" className="ind-rowhead">
+                  {r.label}
+                </th>
+                {COLUMNS.map((c) => (
+                  <Cell key={c.key} col={c} values={r.values} normal={indicators.normal} isNormal={r.id === 'normal'} />
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
       {!changed && !hasDecisions && <p className="ind-note">Normal day. No changed conditions, so there is nothing to compare yet.</p>}
       {triggered.length > 0 && (
         <ul className="ind-checks" aria-label="Checks">

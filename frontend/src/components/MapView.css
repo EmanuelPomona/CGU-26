@@ -102,3 +102,4 @@
   .legend { bottom: var(--s3); max-width: 70%; }
   .legend:not([open]) ul, .legend:not([open]) .legend-toggle { display: none; }
 }
+.mapview.is-collapsed .mk-label { display: none; }
