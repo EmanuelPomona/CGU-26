@@ -1,0 +1,8 @@
+{"features": [
+ {"id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.aaa", "properties": {"event": "Flood Advisory", "severity": "Minor",
+  "areaDesc": "Los Angeles County Coastal; Los Angeles"}},
+ {"id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.bbb", "properties": {"event": "Frost Advisory", "severity": "Minor",
+  "areaDesc": "Kern County"}},
+ {"id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ccc", "properties": {"event": "Red Flag Warning", "severity": "Severe",
+  "areaDesc": "Ventura County Mountains"}}
+]}

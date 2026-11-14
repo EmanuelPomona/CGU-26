@@ -1,0 +1,388 @@
+{
+ "terminals": [
+  {
+   "id": "POLA",
+   "name": "Port of Los Angeles",
+   "lat": 33.7395,
+   "lng": -118.278
+  },
+  {
+   "id": "POLB",
+   "name": "Port of Long Beach",
+   "lat": 33.7555,
+   "lng": -118.2185
+  }
+ ],
+ "warehouses": [
+  {
+   "id": "VER",
+   "name": "Vernon DC",
+   "lat": 34.003,
+   "lng": -118.23,
+   "docks": 12,
+   "capacity": 40,
+   "booked": 31
+  },
+  {
+   "id": "COM",
+   "name": "Commerce Cross-Dock",
+   "lat": 34.001,
+   "lng": -118.156,
+   "docks": 8,
+   "capacity": 24,
+   "booked": 20
+  },
+  {
+   "id": "SFS",
+   "name": "Santa Fe Springs DC",
+   "lat": 33.942,
+   "lng": -118.085,
+   "docks": 10,
+   "capacity": 30,
+   "booked": 18
+  },
+  {
+   "id": "ONT",
+   "name": "Ontario Fulfillment",
+   "lat": 34.03,
+   "lng": -117.59,
+   "docks": 20,
+   "capacity": 60,
+   "booked": 44
+  },
+  {
+   "id": "FON",
+   "name": "Fontana Hub",
+   "lat": 34.095,
+   "lng": -117.46,
+   "docks": 16,
+   "capacity": 50,
+   "booked": 30
+  },
+  {
+   "id": "IRV",
+   "name": "Irvine Distribution",
+   "lat": 33.692,
+   "lng": -117.84,
+   "docks": 6,
+   "capacity": 18,
+   "booked": 17
+  }
+ ],
+ "trucks": [
+  {
+   "id": "T1",
+   "driver_label": "Driver 01",
+   "lat": 33.77,
+   "lng": -118.2,
+   "hours_available": 9.5,
+   "spare": false
+  },
+  {
+   "id": "T2",
+   "driver_label": "Driver 02",
+   "lat": 33.75,
+   "lng": -118.29,
+   "hours_available": 8.0,
+   "spare": false
+  },
+  {
+   "id": "T3",
+   "driver_label": "Driver 03",
+   "lat": 33.79,
+   "lng": -118.28,
+   "hours_available": 10.0,
+   "spare": false
+  },
+  {
+   "id": "T4",
+   "driver_label": "Driver 04",
+   "lat": 33.765,
+   "lng": -118.205,
+   "hours_available": 7.5,
+   "spare": false
+  },
+  {
+   "id": "T5",
+   "driver_label": "Driver 05",
+   "lat": 33.745,
+   "lng": -118.265,
+   "hours_available": 9.0,
+   "spare": false
+  },
+  {
+   "id": "T6",
+   "driver_label": "Driver 06",
+   "lat": 33.76,
+   "lng": -118.21,
+   "hours_available": 8.5,
+   "spare": false
+  },
+  {
+   "id": "T7",
+   "driver_label": "Driver 07",
+   "lat": 33.775,
+   "lng": -118.225,
+   "hours_available": 10.5,
+   "spare": false
+  },
+  {
+   "id": "T8",
+   "driver_label": "Driver 08",
+   "lat": 33.78,
+   "lng": -118.27,
+   "hours_available": 9.0,
+   "spare": true
+  },
+  {
+   "id": "T9",
+   "driver_label": "Driver 09",
+   "lat": 33.83,
+   "lng": -118.22,
+   "hours_available": 9.5,
+   "spare": true
+  }
+ ],
+ "sensitive_places": [
+  {
+   "id": "SP-01",
+   "kind": "school",
+   "name": "Simulated school 01",
+   "lat": 33.787,
+   "lng": -118.262,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-02",
+   "kind": "residential",
+   "name": "Simulated residential area 02",
+   "lat": 33.835,
+   "lng": -118.253,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-03",
+   "kind": "school",
+   "name": "Simulated school 03",
+   "lat": 33.79,
+   "lng": -118.216,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-04",
+   "kind": "school",
+   "name": "Simulated school 04",
+   "lat": 33.895,
+   "lng": -118.22,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-05",
+   "kind": "school",
+   "name": "Simulated school 05",
+   "lat": 33.938,
+   "lng": -118.244,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-06",
+   "kind": "residential",
+   "name": "Simulated residential area 06",
+   "lat": 33.981,
+   "lng": -118.225,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-07",
+   "kind": "school",
+   "name": "Simulated school 07",
+   "lat": 33.996,
+   "lng": -118.148,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-08",
+   "kind": "school",
+   "name": "Simulated school 08",
+   "lat": 33.965,
+   "lng": -118.15,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-09",
+   "kind": "hospital",
+   "name": "Simulated hospital 09",
+   "lat": 33.94,
+   "lng": -118.13,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-10",
+   "kind": "school",
+   "name": "Simulated school 10",
+   "lat": 33.98,
+   "lng": -118.09,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-11",
+   "kind": "residential",
+   "name": "Simulated residential area 11",
+   "lat": 33.945,
+   "lng": -118.07,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-12",
+   "kind": "hospital",
+   "name": "Simulated hospital 12",
+   "lat": 33.979,
+   "lng": -118.03,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-13",
+   "kind": "school",
+   "name": "Simulated school 13",
+   "lat": 34.01,
+   "lng": -118.11,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-14",
+   "kind": "school",
+   "name": "Simulated school 14",
+   "lat": 34.055,
+   "lng": -117.75,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-15",
+   "kind": "residential",
+   "name": "Simulated residential area 15",
+   "lat": 34.015,
+   "lng": -117.69,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-16",
+   "kind": "school",
+   "name": "Simulated school 16",
+   "lat": 34.065,
+   "lng": -117.65,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-17",
+   "kind": "school",
+   "name": "Simulated school 17",
+   "lat": 34.09,
+   "lng": -117.44,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-18",
+   "kind": "residential",
+   "name": "Simulated residential area 18",
+   "lat": 34.107,
+   "lng": -117.37,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-19",
+   "kind": "school",
+   "name": "Simulated school 19",
+   "lat": 33.835,
+   "lng": -117.91,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-20",
+   "kind": "school",
+   "name": "Simulated school 20",
+   "lat": 33.685,
+   "lng": -117.81,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-21",
+   "kind": "hospital",
+   "name": "Simulated hospital 21",
+   "lat": 33.745,
+   "lng": -117.867,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-22",
+   "kind": "residential",
+   "name": "Simulated residential area 22",
+   "lat": 33.788,
+   "lng": -117.853,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-23",
+   "kind": "school",
+   "name": "Simulated school 23",
+   "lat": 33.862,
+   "lng": -118.064,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-24",
+   "kind": "school",
+   "name": "Simulated school 24",
+   "lat": 33.889,
+   "lng": -118.16,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-25",
+   "kind": "school",
+   "name": "Simulated school 25",
+   "lat": 33.93,
+   "lng": -118.21,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-26",
+   "kind": "school",
+   "name": "Simulated school 26",
+   "lat": 33.955,
+   "lng": -118.212,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-27",
+   "kind": "school",
+   "name": "Simulated school 27",
+   "lat": 34.106,
+   "lng": -117.57,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-28",
+   "kind": "residential",
+   "name": "Simulated residential area 28",
+   "lat": 34.068,
+   "lng": -117.939,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-29",
+   "kind": "school",
+   "name": "Simulated school 29",
+   "lat": 34.003,
+   "lng": -117.81,
+   "source": "simulated"
+  },
+  {
+   "id": "SP-30",
+   "kind": "residential",
+   "name": "Simulated residential area 30",
+   "lat": 33.875,
+   "lng": -117.566,
+   "source": "simulated"
+  }
+ ]
+}

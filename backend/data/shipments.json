@@ -1,0 +1,79 @@
+[
+ {
+  "id": "C-101",
+  "terminal_id": "POLA",
+  "warehouse_id": "VER",
+  "truck_id": "T2",
+  "ready_min": 480,
+  "appt_start_min": 555,
+  "appt_end_min": 590,
+  "cargo": "Retail goods",
+  "priority": "normal"
+ },
+ {
+  "id": "C-102",
+  "terminal_id": "POLB",
+  "warehouse_id": "COM",
+  "truck_id": "T1",
+  "ready_min": 480,
+  "appt_start_min": 550,
+  "appt_end_min": 595,
+  "cargo": "Perishable (cold chain)",
+  "priority": "high"
+ },
+ {
+  "id": "C-103",
+  "terminal_id": "POLA",
+  "warehouse_id": "ONT",
+  "truck_id": "T3",
+  "ready_min": 510,
+  "appt_start_min": 620,
+  "appt_end_min": 665,
+  "cargo": "E-commerce",
+  "priority": "normal"
+ },
+ {
+  "id": "C-104",
+  "terminal_id": "POLB",
+  "warehouse_id": "FON",
+  "truck_id": "T4",
+  "ready_min": 540,
+  "appt_start_min": 665,
+  "appt_end_min": 710,
+  "cargo": "Furniture",
+  "priority": "normal"
+ },
+ {
+  "id": "C-105",
+  "terminal_id": "POLA",
+  "warehouse_id": "SFS",
+  "truck_id": "T5",
+  "ready_min": 480,
+  "appt_start_min": 545,
+  "appt_end_min": 580,
+  "cargo": "Medical supplies",
+  "priority": "high"
+ },
+ {
+  "id": "C-106",
+  "terminal_id": "POLB",
+  "warehouse_id": "IRV",
+  "truck_id": "T6",
+  "ready_min": 600,
+  "appt_start_min": 670,
+  "appt_end_min": 715,
+  "cargo": "Electronics",
+  "priority": "normal"
+ },
+ {
+  "id": "C-107",
+  "terminal_id": "POLB",
+  "warehouse_id": "ONT",
+  "truck_id": "T7",
+  "ready_min": 480,
+  "appt_start_min": 610,
+  "appt_end_min": 650,
+  "cargo": "Apparel",
+  "priority": "normal"
+ }
+]

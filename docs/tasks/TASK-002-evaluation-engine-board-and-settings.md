@@ -1,7 +1,7 @@
 ---
 id: TASK-002
 title: Evaluation engine board and settings
-status: READY
+status: REVIEW
 owner: backend
 branch: agent/backend
 priority: HIGH

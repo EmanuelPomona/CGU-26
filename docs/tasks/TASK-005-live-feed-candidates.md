@@ -1,7 +1,7 @@
 ---
 id: TASK-005
 title: Live feed candidates
-status: BACKLOG
+status: REVIEW
 owner: backend
 branch: agent/backend
 priority: LOW

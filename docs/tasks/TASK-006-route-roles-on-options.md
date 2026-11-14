@@ -1,7 +1,7 @@
 ---
 id: TASK-006
 title: Route roles on options
-status: READY
+status: REVIEW
 owner: backend
 branch: agent/backend
 priority: HIGH
