@@ -53,13 +53,12 @@ def test_method_lists_every_constant_as_simulated(client):
         "environment", "fairness", "transparency", "human_oversight", "responsible_data"}
 
 
-def test_feed_candidates_not_enabled(client):
+def test_feed_candidates_offline_reports_sources_down(client):
     r = client.get("/api/feeds/candidates")
     assert r.status_code == 200
     assert_matches("FeedCandidates", r.json())
-    assert r.json() == {"sources": [{"name": "CHP incidents", "ok": False, "error": "not enabled"},
-                                    {"name": "NWS alerts", "ok": False, "error": "not enabled"}],
-                        "candidates": []}
+    assert r.json()["candidates"] == []
+    assert [(s["name"], s["ok"]) for s in r.json()["sources"]] == [("CHP incidents", False), ("NWS alerts", False)]
 
 
 def test_unknown_path_is_404_not_found(client):

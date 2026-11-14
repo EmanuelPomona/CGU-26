@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<State>
+<Center ID="LACC"><Dispatch ID="LACC">
+<Log ID="260114LA0001"><LogTime>"Nov 14 2026 10:41AM"</LogTime><LogType>"1183-Trfc Collision-Unkn Inj"</LogType>
+<Location>"I110 N / Rosecrans Ave"</Location><LocationDesc>"near the on ramp"</LocationDesc><Area>"South Los Angeles"</Area>
+<LATLON>"33858030:118284510"</LATLON></Log>
+<Log ID="260114LA0002"><LogTime>"Nov 14 2026 10:45AM"</LogTime><LogType>"1125-Traffic Hazard"</LogType>
+<Location>"SR14 N / Escondido Canyon Rd"</Location><LocationDesc>""</LocationDesc><Area>"Newhall"</Area>
+<LATLON>"34484000:118291000"</LATLON></Log>
+<Log ID="260114LA0003"><LogTime>"Nov 14 2026 10:50AM"</LogTime><LogType>"1182-Trfc Collision-No Inj"</LogType>
+<Location>"Out of state"</Location><LocationDesc>""</LocationDesc><Area>"Nowhere"</Area>
+<LATLON>"40712000:74006000"</LATLON></Log>
+<Log ID="260114LA0004"><LogTime>"Nov 14 2026 10:52AM"</LogTime><LogType>"SILVER Alert"</LogType>
+<Location>"I110 N / Rosecrans Ave"</Location><LocationDesc>""</LocationDesc><Area>"South Los Angeles"</Area>
+<LATLON>"33858030:118284510"</LATLON></Log>
+</Dispatch></Center>
+</State>
