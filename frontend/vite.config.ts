@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
 // The worktree's root .env carries FRONTEND_PORT, VITE_API_BASE_URL, VITE_USE_MOCK.
