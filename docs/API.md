@@ -120,6 +120,10 @@ not apply (for example no spare truck helps). At most one option has
 suggestion in plain words and names the weights. It must not use the words "AI",
 "model predicts", or "optimal": the scoring is rule-based.
 
+Each option carries `roles`: the route roles it wins (`efficiency`, `sustainability`,
+`community`), defined in the YAML. The Dispatch UI's three route cards per truck
+are the options holding each role; the frontend never ranks options itself.
+
 Option ids are deterministic for the same conditions, so the id the client read
 is the id it posts back.
 
