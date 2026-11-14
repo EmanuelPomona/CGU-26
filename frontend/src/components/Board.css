@@ -1,0 +1,125 @@
+.board {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.board-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4) var(--s2);
+}
+.board-title h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-lg);
+  line-height: 1.1;
+}
+.board-title p { color: var(--ink-2); }
+.board-title-risk { color: var(--at-risk); font-weight: 600; }
+
+.board-grid {
+  overflow-y: auto;
+  min-height: 0;
+  border-top: var(--heavy);
+}
+
+.board-row {
+  display: grid;
+  grid-template-columns: 54px minmax(72px, 1fr) 76px 64px 88px 76px minmax(140px, 1.7fr) 66px;
+  column-gap: 6px;
+  align-items: center;
+  padding: var(--s2) var(--s4);
+  border-bottom: var(--hairline);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+
+.board-head {
+  align-items: end;
+  padding-top: var(--s1);
+  padding-bottom: var(--s1);
+  border-bottom: 1px solid var(--ink);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  cursor: default;
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  z-index: 1;
+}
+.board-head .col-status { text-align: right; }
+
+.board-row:not(.board-head):hover { background: rgb(27 34 40 / 0.035); }
+.board-row:focus-visible { outline-offset: -2px; }
+.board-row[aria-selected='true'] {
+  background: var(--action-tint);
+  outline: 2px solid var(--action);
+  outline-offset: -2px;
+}
+.board-row[data-attention='act'] .col-id { font-weight: 600; }
+.board-row[data-attention='act'] .col-id::after {
+  content: ' \25B2';
+  font-size: 9px;
+  color: var(--at-risk);
+  vertical-align: 2px;
+}
+
+.col-id { font-size: var(--fs-sm); }
+.col-cargo, .col-truck, .col-window, .col-eta, .col-status {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.cargo-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cargo-priority { font-weight: 600; }
+.lane-sep { color: var(--ink-2); font-family: var(--font-text); }
+.truck-driver, .window-to, .eta-est { color: var(--ink-2); }
+.truck-none { color: var(--at-risk); font-weight: 600; }
+.window-moved { color: var(--action); }
+.eta-est { font-family: var(--font-text); }
+.eta-late { color: var(--at-risk); font-family: var(--font-text); }
+
+.col-status { align-items: flex-end; text-align: right; }
+.status-word {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-md);
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.status-on_time { color: var(--on-time); }
+.status-tight { color: var(--tight); }
+.status-at_risk { color: var(--at-risk); }
+.status-unverified { color: var(--unverified); font-weight: 600; }
+.status-decided { color: var(--action); }
+
+/* 390: each row is two lines, the strip on the second. */
+@media (max-width: 640px) {
+  .board-grid { overflow: visible; }
+  .board-head { display: none; }
+  .board-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'id    lane   status'
+      'cargo cargo  status'
+      'win   eta    eta'
+      'strip strip  strip';
+    row-gap: 2px;
+    padding: var(--s3) var(--s4);
+  }
+  .col-id { grid-area: id; font-size: var(--fs-md); }
+  .col-lane { grid-area: lane; }
+  .col-cargo { grid-area: cargo; flex-direction: row; gap: var(--s2); }
+  .col-truck { display: none; }
+  .col-window { grid-area: win; flex-direction: row; gap: var(--s1); }
+  .col-eta { grid-area: eta; flex-direction: row; gap: var(--s1); justify-content: flex-end; }
+  .col-strip { grid-area: strip; padding-top: var(--s1); }
+  .col-status { grid-area: status; }
+  .status-word { font-size: var(--fs-lg); }
+}

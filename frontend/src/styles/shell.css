@@ -3,8 +3,8 @@
 .shell {
   display: grid;
   height: 100dvh;
-  grid-template-columns: 272px minmax(0, 1fr) 720px;
-  grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 256px minmax(0, 1fr) 760px;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   grid-template-areas:
     'head head head'
     'cond ind  board'
@@ -64,6 +64,7 @@
 .region-ind {
   border-bottom: var(--hairline);
   background: var(--panel);
+  overflow-x: auto;
 }
 
 .region-map {
