@@ -21,4 +21,11 @@ describe('snapToNearestRoute', () => {
   it('returns null when farther than 2 km', () => {
     expect(snapToNearestRoute(35.0, -117.95, [route])).toBeNull();
   });
+
+  it('breaks ties by shipment id ascending', () => {
+    const a = { shipmentId: 'C-107', latlngs: [[34.0, -118.0], [34.0, -117.9]] as Array<[number, number]> };
+    const b = { shipmentId: 'C-103', latlngs: [[34.0, -118.0], [34.0, -117.9]] as Array<[number, number]> };
+    const hit = snapToNearestRoute(34.0, -117.95, [a, b]);
+    expect(hit?.shipmentId).toBe('C-103');
+  });
 });

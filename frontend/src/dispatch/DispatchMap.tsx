@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import type { Board, Disruption, Network, OptionsResponse, ShipmentRow } from '../api/types';
 import { OBSTACLE_MIME } from './ObstaclePalette';
 import type { ObstacleType } from './obstacleCatalog';
+import { allowShipmentSelect } from './placeMode';
 import { snapToNearestRoute } from './routeSnap';
 import { BAD, BLUEPRINT, GOOD, INK, ONROUTE, PROB, R, ROLE, ROLE_ORDER, fatLbl, type RoleKey, type RouteTruck } from './data';
 
@@ -183,7 +184,10 @@ export function DispatchMap(p: Props) {
       L.polyline(row.route.geometry as L.LatLngTuple[], { color: '#fff', weight: st.weight + 5, opacity: 0.85, interactive: false }).addTo(routes);
       L.polyline(row.route.geometry as L.LatLngTuple[], { ...st, opacity: p.view === 'go' ? 0.35 : 0.9, lineCap: 'butt' })
         .bindTooltip(`<div class="tip"><div class="th">${row.id} → ${row.warehouse_id}</div><div>${esc(row.route.label)}</div></div>`, { className: 'card-tip', sticky: true })
-        .on('click', () => cb.current.onSelect(row.id))
+        .on('click', () => {
+          if (!allowShipmentSelect(cb.current.placeType)) return;
+          cb.current.onSelect(row.id);
+        })
         .addTo(routes);
     }
     if (!p.network) return;
@@ -193,7 +197,11 @@ export function DispatchMap(p: Props) {
       const m = L.marker([t.lat, t.lng], { icon: tkIcon(t.id.replace(/\D/g, ''), cls) })
         .bindTooltip(truckTip(t.id, t.driver_label, t.hours_available, row), { className: 'card-tip', direction: 'right' })
         .addTo(trucks);
-      if (row) m.on('click', () => cb.current.onSelect(row.id));
+      if (row)
+        m.on('click', () => {
+          if (!allowShipmentSelect(cb.current.placeType)) return;
+          cb.current.onSelect(row.id);
+        });
     }
   }, [p.board, p.network, p.view]);
 

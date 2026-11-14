@@ -9,6 +9,7 @@ import { useBoard } from '../api/useBoard';
 import { DispatchMap, type Verdict, type View } from './DispatchMap';
 import { ObstaclePalette } from './ObstaclePalette';
 import { toDisruptionCreate, type ObstacleType } from './obstacleCatalog';
+import { showObstaclePalette } from './placeMode';
 import { BAD, GOOD, INK, OBJ, ONROUTE, PROB, ROLE, ROLE_ORDER, fatLbl, type RoleKey, type Tag } from './data';
 import './dispatch.css';
 
@@ -241,6 +242,9 @@ export default function DispatchApp() {
     setPlaceType(null);
     await run(() => createDisruption(toDisruptionCreate(type, lat, lng)), 'Obstacle placed');
   };
+  useEffect(() => {
+    if (!showObstaclePalette(view)) setPlaceType(null);
+  }, [view]);
 
   const decide = async (o: ResponseOption, why?: string) => {
     if (!selectedId) return;
@@ -450,7 +454,7 @@ export default function DispatchApp() {
           onObstacleRejected={(reason) => toast(reason)}
         />
         <button id="expand" onClick={() => setView('map')}>Expand map</button>
-        {view !== 'net' && (
+        {showObstaclePalette(view) && (
           <ObstaclePalette selected={placeType} onSelect={setPlaceType} disabled={!board} />
         )}
         {view === 'map' && board && (
