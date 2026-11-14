@@ -1,12 +1,22 @@
 openapi: 3.1.0
 info:
-  title: Project API
-  version: 0.1.0
+  title: Drayline API
+  version: 1.0.0
   description: |
-    Machine-readable twin of docs/API.md. This file is what
-    scripts/contract-test.sh checks the implementation against, so it is the
-    contract that actually gets enforced — keep it in step with the prose.
+    The one authoritative contract between frontend and backend. docs/API.md is
+    the prose companion (consumer jobs and semantics); where they disagree, this
+    file wins and the disagreement is a defect to report.
     Manager owns it. Backend proposes changes via AGENT_PROTOCOL section 6.
+
+    Conventions used by every schema:
+    - Clock values (`*_min` that name a time of day) are integer minutes after
+      local midnight, e.g. 555 = 9:15 AM. Durations are minutes.
+    - Distances are miles, money is USD, CO2 is kilograms.
+    - Coordinates are `lat`, `lng` in WGS84. Route geometry is an array of
+      `[lat, lng]` pairs (Leaflet order).
+    - IDs are opaque strings. Never parse them.
+    - Every field listed under `required` is always present. Nullable fields are
+      typed `[T, "null"]` and are present with value null when not applicable.
 servers:
   - url: http://localhost:8000
     description: local (BACKEND_PORT from .env)
@@ -14,6 +24,7 @@ paths:
   /api/health:
     get:
       summary: Liveness probe
+      operationId: getHealth
       responses:
         '200':
           description: service is up
@@ -24,12 +35,698 @@ paths:
                 required: [status]
                 properties:
                   status: { type: string, enum: [ok] }
+
+  /api/network:
+    get:
+      summary: Static world, terminals, warehouses, trucks, sensitive places
+      operationId: getNetwork
+      responses:
+        '200':
+          description: the fictional network
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Network' }
+
+  /api/method:
+    get:
+      summary: Assumptions, formulas, data sources and limits for the Method page
+      operationId: getMethod
+      responses:
+        '200':
+          description: how every number is made
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Method' }
+
+  /api/board:
+    get:
+      summary: The whole dispatcher board under current conditions
+      operationId: getBoard
+      responses:
+        '200':
+          description: current board
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Board' }
+
+  /api/settings:
+    put:
+      summary: Replace clock and priority weights
+      operationId: putSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Settings' }
+      responses:
+        '200':
+          description: updated board
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Board' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /api/reset:
+    post:
+      summary: Return to the clean normal day (no disruptions, no decisions, default settings)
+      operationId: postReset
+      responses:
+        '200':
+          description: fresh board
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Board' }
+
+  /api/presets:
+    get:
+      summary: One-click what-if conditions for the demo
+      operationId: getPresets
+      responses:
+        '200':
+          description: presets
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [presets]
+                properties:
+                  presets:
+                    type: array
+                    items: { $ref: '#/components/schemas/Preset' }
+
+  /api/disruptions:
+    get:
+      summary: All disruptions including dismissed ones
+      operationId: listDisruptions
+      responses:
+        '200':
+          description: disruptions, oldest first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [disruptions]
+                properties:
+                  disruptions:
+                    type: array
+                    items: { $ref: '#/components/schemas/Disruption' }
+    post:
+      summary: Add a changed condition. It starts unverified.
+      operationId: createDisruption
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DisruptionCreate' }
+      responses:
+        '201':
+          description: updated board; the new disruption is the last item of board.disruptions
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Board' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /api/disruptions/{disruption_id}:
+    parameters:
+      - name: disruption_id
+        in: path
+        required: true
+        schema: { type: string }
+    patch:
+      summary: Record the dispatcher's verification of a disruption
+      operationId: updateDisruption
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DisruptionUpdate' }
+      responses:
+        '200':
+          description: updated board
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Board' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      summary: Remove a disruption entirely
+      operationId: deleteDisruption
+      responses:
+        '200':
+          description: updated board
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Board' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/shipments/{shipment_id}/options:
+    parameters:
+      - name: shipment_id
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      summary: Response options for one shipment under current conditions and weights
+      operationId: getOptions
+      responses:
+        '200':
+          description: options, `keep` always first
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OptionsResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/decisions:
+    get:
+      summary: Decision log, oldest first
+      operationId: listDecisions
+      responses:
+        '200':
+          description: decisions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [decisions]
+                properties:
+                  decisions:
+                    type: array
+                    items: { $ref: '#/components/schemas/Decision' }
+    post:
+      summary: Record the dispatcher's chosen response for a shipment and apply it to the plan
+      operationId: createDecision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DecisionCreate' }
+      responses:
+        '201':
+          description: the decision and the updated board
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DecisionResult' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /api/decisions/{decision_id}:
+    parameters:
+      - name: decision_id
+        in: path
+        required: true
+        schema: { type: string }
+    delete:
+      summary: Undo a decision; the shipment returns to its original plan
+      operationId: deleteDecision
+      responses:
+        '200':
+          description: updated board
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Board' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/feeds/candidates:
+    get:
+      summary: Candidate disruptions from public feeds near active routes. Never applied automatically.
+      operationId: getFeedCandidates
+      responses:
+        '200':
+          description: always 200; a feed that is down is reported in `sources`
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeedCandidates' }
+
 components:
+  responses:
+    ValidationError:
+      description: request body or parameter failed validation
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: no resource with that id
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: the request is well-formed but cannot be applied in the current state
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
   schemas:
     Error:
       type: object
-      required: [error]
+      required: [error, message]
       properties:
-        error:   { type: string, description: machine-readable code }
-        message: { type: string, description: human-readable detail }
+        error:
+          type: string
+          enum: [validation_error, not_found, option_infeasible, internal_error]
+          description: machine-readable code
+        message: { type: string, description: human-readable detail, safe to show }
         field:   { type: string, description: offending field, when applicable }
+
+    # ---------- static world ----------
+    Terminal:
+      type: object
+      required: [id, name, lat, lng]
+      properties:
+        id:   { type: string }
+        name: { type: string }
+        lat:  { type: number }
+        lng:  { type: number }
+    Warehouse:
+      type: object
+      required: [id, name, lat, lng, docks, capacity, booked]
+      properties:
+        id:   { type: string }
+        name: { type: string }
+        lat:  { type: number }
+        lng:  { type: number }
+        docks:    { type: integer, minimum: 0 }
+        capacity: { type: integer, minimum: 0, description: receiving slots today }
+        booked:   { type: integer, minimum: 0 }
+    Truck:
+      type: object
+      required: [id, driver_label, lat, lng, hours_available, spare]
+      properties:
+        id:           { type: string }
+        driver_label: { type: string, description: 'pseudonym such as "Driver 01"; never a name' }
+        lat:          { type: number }
+        lng:          { type: number }
+        hours_available: { type: number, description: driver hours left on shift }
+        spare:        { type: boolean, description: true when not assigned to any shipment in the seed plan }
+    SensitivePlace:
+      type: object
+      required: [id, kind, name, lat, lng, source]
+      properties:
+        id:   { type: string }
+        kind: { type: string, enum: [school, hospital, residential] }
+        name: { type: string }
+        lat:  { type: number }
+        lng:  { type: number }
+        source: { type: string, enum: [simulated, public] }
+    Network:
+      type: object
+      required: [terminals, warehouses, trucks, sensitive_places]
+      properties:
+        terminals:        { type: array, items: { $ref: '#/components/schemas/Terminal' } }
+        warehouses:       { type: array, items: { $ref: '#/components/schemas/Warehouse' } }
+        trucks:           { type: array, items: { $ref: '#/components/schemas/Truck' } }
+        sensitive_places: { type: array, items: { $ref: '#/components/schemas/SensitivePlace' } }
+
+    Route:
+      type: object
+      required: [id, label, via, distance_mi, base_minutes, estimated, geometry]
+      properties:
+        id:    { type: string }
+        label: { type: string, description: 'main roads, e.g. "I-710 → I-5"' }
+        via:   { type: [string, 'null'], description: named waypoint for a detour, else null }
+        distance_mi:  { type: number, minimum: 0 }
+        base_minutes: { type: number, minimum: 0, description: free-flow drive time before traffic and disruptions }
+        estimated:    { type: boolean, description: true when road routing was unavailable and this is a straight-line estimate }
+        geometry:
+          type: array
+          minItems: 2
+          items:
+            type: array
+            minItems: 2
+            maxItems: 2
+            items: { type: number }
+
+    # ---------- evaluation ----------
+    Evaluation:
+      type: object
+      description: One shipment, one plan, one set of conditions. Every figure is an estimate from the model in /api/method.
+      required: [status, truck_id, route_id, appt_shift_min, eta_min, eta_sigma_min, appt_start_min, appt_end_min,
+                 slack_min, late_min, on_time_probability, miles, cost_usd, co2_kg, community_score,
+                 community_detail, local_street_miles, sensitive_places_near, driver_hours,
+                 driver_hours_over, idle_min, flags, needs_review, hit_disruption_ids]
+      properties:
+        status: { type: string, enum: [on_time, tight, at_risk] }
+        truck_id: { type: [string, 'null'], description: null when no truck is available }
+        route_id: { type: string }
+        appt_shift_min: { type: integer, minimum: 0, description: minutes the appointment was moved later; 0 = original }
+        eta_min:        { type: integer, description: estimated arrival, minutes after midnight }
+        eta_sigma_min:  { type: number, minimum: 0, description: one standard deviation of the arrival estimate, for the strip whisker }
+        appt_start_min: { type: integer, description: window start including any shift }
+        appt_end_min:   { type: integer, description: window end including any shift }
+        slack_min: { type: integer, description: appt_end_min minus eta_min; negative means late }
+        late_min:  { type: integer, minimum: 0 }
+        on_time_probability: { type: number, minimum: 0, maximum: 1 }
+        miles:    { type: number, minimum: 0, description: deadhead + loaded + return }
+        cost_usd: { type: number, minimum: 0 }
+        co2_kg:   { type: number, minimum: 0 }
+        community_score: { type: number, minimum: 0, maximum: 100, description: 100 = no local-street miles and no sensitive places near the route }
+        community_detail: { type: string, description: one sentence explaining the community score }
+        local_street_miles: { type: number, minimum: 0 }
+        sensitive_places_near: { type: integer, minimum: 0, description: schools, hospitals, homes within 250 m of the route on local streets }
+        driver_hours:      { type: number, minimum: 0 }
+        driver_hours_over: { type: number, minimum: 0, description: hours beyond the driver's remaining shift; 0 when within limit }
+        idle_min: { type: integer, minimum: 0 }
+        flags: { type: array, items: { type: string }, description: short plain-language cautions, safe to show }
+        needs_review: { type: boolean, description: true when the result depends on a disruption a human has not confirmed }
+        hit_disruption_ids: { type: array, items: { type: string } }
+
+    Indicators:
+      type: object
+      required: [shipments_at_risk, shipments_tight, total_late_min, fleet_miles, co2_kg, cost_usd,
+                 community_score_avg, drivers_over_hours, idle_min]
+      properties:
+        shipments_at_risk:  { type: integer, minimum: 0 }
+        shipments_tight:    { type: integer, minimum: 0 }
+        total_late_min:     { type: integer, minimum: 0 }
+        fleet_miles:        { type: number, minimum: 0 }
+        co2_kg:             { type: number, minimum: 0 }
+        cost_usd:           { type: number, minimum: 0 }
+        community_score_avg: { type: number, minimum: 0, maximum: 100 }
+        drivers_over_hours: { type: integer, minimum: 0 }
+        idle_min:           { type: integer, minimum: 0 }
+    Check:
+      type: object
+      description: A named rule over the indicators. Rule-based, not a trained model.
+      required: [id, label, triggered, detail]
+      properties:
+        id:        { type: string, enum: [added_miles_review, new_at_risk, driver_hours, unverified_inputs] }
+        label:     { type: string }
+        triggered: { type: boolean }
+        detail:    { type: string, description: states the rule, the threshold and the observed value }
+    IndicatorSet:
+      type: object
+      required: [normal, changed, decided, checks]
+      properties:
+        normal:  { $ref: '#/components/schemas/Indicators', description: original plans, no disruptions }
+        changed: { $ref: '#/components/schemas/Indicators', description: original plans under active disruptions }
+        decided: { $ref: '#/components/schemas/Indicators', description: plans after the dispatcher's decisions, under active disruptions }
+        checks:  { type: array, items: { $ref: '#/components/schemas/Check' } }
+
+    ShipmentRow:
+      type: object
+      required: [id, cargo, priority, terminal_id, warehouse_id, ready_min, normal, changed, current,
+                 route, normal_route_id, attention, decision_id]
+      properties:
+        id:       { type: string, description: 'container move id, e.g. "C-101"' }
+        cargo:    { type: string }
+        priority: { type: string, enum: [normal, high] }
+        terminal_id:  { type: string }
+        warehouse_id: { type: string }
+        ready_min: { type: integer, description: container ready for pickup, including any pickup delay in effect }
+        normal:  { $ref: '#/components/schemas/Evaluation', description: original plan, no disruptions }
+        changed: { $ref: '#/components/schemas/Evaluation', description: original plan under active disruptions }
+        current: { $ref: '#/components/schemas/Evaluation', description: plan in force (decision applied if any) under active disruptions }
+        route:   { $ref: '#/components/schemas/Route', description: geometry of the plan in force }
+        normal_route_id: { type: string }
+        attention:
+          type: string
+          enum: [none, watch, act]
+          description: act = current.status is at_risk; watch = tight or needs_review; none otherwise
+        decision_id: { type: [string, 'null'] }
+
+    # ---------- conditions ----------
+    Area:
+      type: object
+      required: [lat, lng, radius_km]
+      properties:
+        lat: { type: number, minimum: 32.0, maximum: 36.0 }
+        lng: { type: number, minimum: -121.0, maximum: -114.0 }
+        radius_km: { type: number, minimum: 0.5, maximum: 15 }
+    DisruptionKind:
+      type: string
+      enum: [slowdown, closure, hazard, pickup_delay, truck_out, dock_cut]
+    DisruptionCreate:
+      type: object
+      description: |
+        Required companions by kind (422 validation_error naming the field otherwise):
+        slowdown: area, slowdown_factor. closure, hazard: area.
+        pickup_delay: shipment_id, delay_min. truck_out: truck_ids (non-empty).
+        dock_cut: warehouse_id, capacity_cut. Fields that do not belong to the kind are ignored.
+      required: [kind]
+      properties:
+        kind:  { $ref: '#/components/schemas/DisruptionKind' }
+        label: { type: string, maxLength: 80, description: defaults to a generated label }
+        source: { type: string, enum: [simulated, dispatcher, public_feed], default: dispatcher }
+        confidence: { type: number, minimum: 0.1, maximum: 1, default: 0.7, description: how likely the report is true, as entered }
+        area: { $ref: '#/components/schemas/Area' }
+        slowdown_factor: { type: number, minimum: 1.2, maximum: 4, description: travel-time multiplier inside the area }
+        shipment_id: { type: string }
+        delay_min:   { type: integer, minimum: 15, maximum: 480 }
+        truck_ids:   { type: array, items: { type: string }, maxItems: 9 }
+        warehouse_id: { type: string }
+        capacity_cut: { type: number, minimum: 0.1, maximum: 1, description: fraction of docks lost }
+    Disruption:
+      type: object
+      required: [id, kind, label, source, verification, confidence, area, slowdown_factor, shipment_id,
+                 delay_min, truck_ids, warehouse_id, capacity_cut, affected_shipment_ids, note]
+      properties:
+        id:    { type: string }
+        kind:  { $ref: '#/components/schemas/DisruptionKind' }
+        label: { type: string }
+        source: { type: string, enum: [simulated, dispatcher, public_feed] }
+        verification:
+          type: string
+          enum: [unverified, confirmed, dismissed]
+          description: |
+            unverified = applied with its confidence, results marked needs_review.
+            confirmed = applied as certain. dismissed = kept in the list, ignored by every calculation.
+        confidence: { type: number, minimum: 0, maximum: 1 }
+        area: { oneOf: [ { $ref: '#/components/schemas/Area' }, { type: 'null' } ] }
+        slowdown_factor: { type: [number, 'null'] }
+        shipment_id:     { type: [string, 'null'] }
+        delay_min:       { type: [integer, 'null'] }
+        truck_ids:       { type: array, items: { type: string }, description: empty unless kind is truck_out }
+        warehouse_id:    { type: [string, 'null'] }
+        capacity_cut:    { type: [number, 'null'] }
+        affected_shipment_ids: { type: array, items: { type: string }, description: shipments whose original plan this touches; computed even when dismissed }
+        note: { type: [string, 'null'], description: dispatcher note recorded at verification }
+    DisruptionUpdate:
+      type: object
+      required: [verification]
+      properties:
+        verification: { type: string, enum: [unverified, confirmed, dismissed] }
+        note: { type: string, maxLength: 200 }
+    Preset:
+      type: object
+      required: [id, label, description, disruption]
+      properties:
+        id:    { type: string }
+        label: { type: string }
+        description: { type: string }
+        disruption: { $ref: '#/components/schemas/DisruptionCreate' }
+
+    # ---------- settings ----------
+    Weights:
+      type: object
+      description: Relative importance, 0 to 100 each. They move the suggestion, never the facts. At least one must be above zero.
+      required: [reliability, cost, emissions, community, driver]
+      properties:
+        reliability: { type: integer, minimum: 0, maximum: 100 }
+        cost:        { type: integer, minimum: 0, maximum: 100 }
+        emissions:   { type: integer, minimum: 0, maximum: 100 }
+        community:   { type: integer, minimum: 0, maximum: 100 }
+        driver:      { type: integer, minimum: 0, maximum: 100 }
+    Settings:
+      type: object
+      required: [clock_min, weights]
+      properties:
+        clock_min: { type: integer, minimum: 360, maximum: 1080, description: dispatch clock; default 480 (8:00 AM) }
+        weights:   { $ref: '#/components/schemas/Weights' }
+
+    # ---------- board ----------
+    Board:
+      type: object
+      required: [settings, disruptions, shipments, indicators, decisions, pending_verification_ids]
+      properties:
+        settings:    { $ref: '#/components/schemas/Settings' }
+        disruptions: { type: array, items: { $ref: '#/components/schemas/Disruption' }, description: oldest first, dismissed included }
+        shipments:   { type: array, items: { $ref: '#/components/schemas/ShipmentRow' }, description: fixed seed order }
+        indicators:  { $ref: '#/components/schemas/IndicatorSet' }
+        decisions:   { type: array, items: { $ref: '#/components/schemas/Decision' }, description: oldest first }
+        pending_verification_ids: { type: array, items: { type: string }, description: ids of unverified disruptions, oldest first }
+
+    # ---------- options and decisions ----------
+    OptionKind:
+      type: string
+      enum: [keep, reroute, spare_truck, swap_truck, reschedule]
+    Burden:
+      type: object
+      description: Who bears extra work, cost or risk if this option is chosen.
+      required: [stakeholder, text]
+      properties:
+        stakeholder: { type: string, enum: [driver, residents, warehouse, other_customer, company] }
+        text: { type: string }
+    OptionDelta:
+      type: object
+      description: This option minus the `keep` option. Positive late/miles/co2/cost is worse; positive community_score and on_time_probability is better.
+      required: [late_min, miles, co2_kg, cost_usd, community_score, on_time_probability]
+      properties:
+        late_min: { type: integer }
+        miles:    { type: number }
+        co2_kg:   { type: number }
+        cost_usd: { type: number }
+        community_score: { type: number }
+        on_time_probability: { type: number }
+    OptionScores:
+      type: object
+      description: 0 to 100, higher is better, normalized across the options of this shipment. Rule-based.
+      required: [reliability, cost, emissions, community, driver, overall]
+      properties:
+        reliability: { type: number, minimum: 0, maximum: 100 }
+        cost:        { type: number, minimum: 0, maximum: 100 }
+        emissions:   { type: number, minimum: 0, maximum: 100 }
+        community:   { type: number, minimum: 0, maximum: 100 }
+        driver:      { type: number, minimum: 0, maximum: 100 }
+        overall:     { type: number, minimum: 0, maximum: 100, description: weighted by Settings.weights }
+    Collateral:
+      type: object
+      description: Another shipment changed by this option (truck swap).
+      required: [shipment_id, before, after]
+      properties:
+        shipment_id: { type: string }
+        before: { $ref: '#/components/schemas/Evaluation' }
+        after:  { $ref: '#/components/schemas/Evaluation' }
+    Option:
+      type: object
+      required: [id, kind, title, description, feasible, infeasible_reason, suggested, evaluation, delta,
+                 scores, burdens, collateral, route, notes]
+      properties:
+        id:
+          type: string
+          description: 'stable for the same conditions: "keep", "reroute:<route_id>", "spare:<truck_id>", "swap:<shipment_id>", "reschedule:<minutes>"'
+        kind:  { $ref: '#/components/schemas/OptionKind' }
+        title: { type: string }
+        description: { type: string }
+        feasible: { type: boolean, description: false when no truck is available or driver hours would be exceeded }
+        infeasible_reason: { type: [string, 'null'] }
+        suggested: { type: boolean, description: at most one option per response; never an infeasible one }
+        evaluation: { $ref: '#/components/schemas/Evaluation' }
+        delta:  { $ref: '#/components/schemas/OptionDelta' }
+        scores: { $ref: '#/components/schemas/OptionScores' }
+        burdens: { type: array, items: { $ref: '#/components/schemas/Burden' } }
+        collateral: { type: array, items: { $ref: '#/components/schemas/Collateral' } }
+        route: { $ref: '#/components/schemas/Route' }
+        notes: { type: array, items: { type: string } }
+    OptionsResponse:
+      type: object
+      required: [shipment_id, weights, options, suggested_option_id, rationale]
+      properties:
+        shipment_id: { type: string }
+        weights: { $ref: '#/components/schemas/Weights' }
+        options:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Option' }
+        suggested_option_id: { type: [string, 'null'] }
+        rationale: { type: string, description: plain-language reason for the suggestion, naming the rule and weights used }
+    DecisionCreate:
+      type: object
+      required: [shipment_id, option_id]
+      properties:
+        shipment_id: { type: string }
+        option_id:   { type: string }
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 300
+          description: required when the chosen option is not the suggested one (422, field "reason")
+    Decision:
+      type: object
+      required: [id, seq, shipment_id, option_id, option_kind, option_title, was_suggested, reason,
+                 decided_at_clock_min, before, after, also_affects, supervisor_update]
+      properties:
+        id:  { type: string }
+        seq: { type: integer, minimum: 1 }
+        shipment_id: { type: string }
+        option_id:   { type: string }
+        option_kind: { $ref: '#/components/schemas/OptionKind' }
+        option_title: { type: string }
+        was_suggested: { type: boolean }
+        reason: { type: [string, 'null'] }
+        decided_at_clock_min: { type: integer }
+        before: { $ref: '#/components/schemas/Evaluation', description: plan in force just before the decision }
+        after:  { $ref: '#/components/schemas/Evaluation', description: chosen plan at the moment of decision }
+        also_affects: { type: array, items: { type: string }, description: other shipment ids changed (truck swap) }
+        supervisor_update: { type: string, description: drafted plain-text message; multi-line; the dispatcher sends it, the tool does not }
+    DecisionResult:
+      type: object
+      required: [decision, board]
+      properties:
+        decision: { $ref: '#/components/schemas/Decision' }
+        board:    { $ref: '#/components/schemas/Board' }
+
+    # ---------- method ----------
+    ValueKind:
+      type: string
+      enum: [simulated, estimated, public]
+      description: simulated = invented for the demo; estimated = computed by the model; public = from an open data source
+    Assumption:
+      type: object
+      required: [key, label, value, unit, kind, note]
+      properties:
+        key:   { type: string }
+        label: { type: string }
+        value: { type: number }
+        unit:  { type: string }
+        kind:  { $ref: '#/components/schemas/ValueKind' }
+        note:  { type: string }
+    Formula:
+      type: object
+      required: [id, label, expression, explanation]
+      properties:
+        id:    { type: string }
+        label: { type: string }
+        expression:  { type: string }
+        explanation: { type: string }
+    DataSource:
+      type: object
+      required: [name, kind, used_for, limits]
+      properties:
+        name: { type: string }
+        kind: { $ref: '#/components/schemas/ValueKind' }
+        used_for: { type: string }
+        limits:   { type: string }
+    Method:
+      type: object
+      required: [assumptions, formulas, data_sources, not_modeled, responsible_design]
+      properties:
+        assumptions:  { type: array, items: { $ref: '#/components/schemas/Assumption' } }
+        formulas:     { type: array, items: { $ref: '#/components/schemas/Formula' } }
+        data_sources: { type: array, items: { $ref: '#/components/schemas/DataSource' } }
+        not_modeled:  { type: array, items: { type: string } }
+        responsible_design:
+          type: array
+          items:
+            type: object
+            required: [consideration, how]
+            properties:
+              consideration: { type: string, enum: [environment, fairness, transparency, human_oversight, responsible_data] }
+              how: { type: string }
+
+    # ---------- feeds (nice-to-have) ----------
+    FeedSource:
+      type: object
+      required: [name, ok, error]
+      properties:
+        name:  { type: string }
+        ok:    { type: boolean }
+        error: { type: [string, 'null'] }
+    FeedCandidate:
+      type: object
+      required: [id, title, source_name, trust, lat, lng, distance_to_route_mi, near_shipment_ids, suggested]
+      properties:
+        id:    { type: string }
+        title: { type: string }
+        source_name: { type: string }
+        trust: { type: string, enum: [official_report, automated_detection], description: neither proves a road is blocked or passable }
+        lat: { type: number }
+        lng: { type: number }
+        distance_to_route_mi: { type: number, minimum: 0 }
+        near_shipment_ids: { type: array, items: { type: string } }
+        suggested: { $ref: '#/components/schemas/DisruptionCreate', description: body the UI may POST to /api/disruptions if the dispatcher chooses }
+    FeedCandidates:
+      type: object
+      required: [sources, candidates]
+      properties:
+        sources:    { type: array, items: { $ref: '#/components/schemas/FeedSource' } }
+        candidates: { type: array, items: { $ref: '#/components/schemas/FeedCandidate' } }
