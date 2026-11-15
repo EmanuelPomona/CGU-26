@@ -1,25 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import type { StudioAlternative } from '../api/types';
-import { sortStudioAlts } from './RouteStudio';
+import { demoJobFor, routeByKind } from './demoRoutes';
 
-const stub = (slot: StudioAlternative['slot']): StudioAlternative => ({
-  id: slot,
-  slot,
-  algorithm: 'x',
-  label: slot,
-  feasible: true,
-  infeasible_reason: null,
-  summary: '',
-  pros: [],
-  cons: [],
-  metrics: { eta_min: 1, distance_km: 1, co2_kg: 1, obstacle_exposure: 0, local_street_km: 0 },
-  geometry: [],
-  node_ids: [],
-});
+describe('demo routes for George', () => {
+  it('defaults to environment & community minimized', () => {
+    const job = demoJobFor('C-102');
+    expect(job?.chosenKind).toBe('impact');
+    const impact = routeByKind(job!, 'impact', false);
+    expect(impact.scores.community.score).toBeGreaterThan(routeByKind(job!, 'fastest', false).scores.community.score);
+    expect(impact.scores.environment.reasons.length).toBeGreaterThan(0);
+  });
 
-describe('sortStudioAlts', () => {
-  it('orders Fastest, Direct, Avoid', () => {
-    const sorted = sortStudioAlts([stub('avoid'), stub('fastest'), stub('direct')]);
-    expect(sorted.map((a) => a.slot)).toEqual(['fastest', 'direct', 'avoid']);
+  it('offers the same two kinds after an obstacle', () => {
+    const job = demoJobFor('C-102')!;
+    expect(job.reroutes.map((r) => r.kind)).toEqual(['fastest', 'impact']);
   });
 });

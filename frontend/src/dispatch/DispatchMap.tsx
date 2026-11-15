@@ -3,16 +3,19 @@
 import L from 'leaflet';
 import { useEffect, useRef } from 'react';
 import type { Board, Disruption, Network, OptionsResponse, ShipmentRow, StudioSession } from '../api/types';
+import { demoRerouteGeometries, type LatLng as DemoLatLng } from './demoDetours';
+import type { RouteKind } from './demoRoutes';
 import { OBSTACLE_MIME } from './ObstaclePalette';
+import { isDemoShipment, isDemoTruck } from './fleetScope';
 import { obstacleIconSrc, obstacleTypeForDisruption, type ObstacleType } from './obstacleCatalog';
 import { allowShipmentSelect } from './placeMode';
 import { snapToNearestRoute } from './routeSnap';
 import { BAD, BLUEPRINT, GOOD, INK, ONROUTE, PROB, R, ROLE, ROLE_ORDER, fatLbl, type RoleKey, type RouteTruck } from './data';
+// ONROUTE kept as fallback when parent does not pass onRouteTrucks.
 
-const STUDIO_STYLE: Record<string, { color: string; weight: number; dashArray?: string }> = {
-  fastest: { color: '#0a7a3e', weight: 5 },
-  direct: { color: '#1a4a8a', weight: 4, dashArray: '12 7' },
-  avoid: { color: '#8a4a10', weight: 4, dashArray: '1 6' },
+const DEMO_ROUTE_STYLE: Record<RouteKind, { color: string; weight: number; dashArray?: string; label: string }> = {
+  fastest: { color: '#0a7a3e', weight: 6, label: 'Fastest arrival' },
+  impact: { color: '#1a5f8a', weight: 6, dashArray: '12 8', label: 'Environment & community' },
 };
 
 export type View = 'map' | 'go' | 'prob' | 'net';
@@ -65,20 +68,24 @@ function truckTip(id: string, label: string, hours: number, row: ShipmentRow | u
 }
 function scriptedTip(t: RouteTruck) {
   const [fl, fc] = fatLbl(t.fat);
+  const late = t.delta < 0;
   return `<div class="tip"><div class="th">${t.drv} <span class="chip ${t.sit}">${t.sitT}</span></div>${tipRow('Truck', t.id)}${tipRow(
+    'On time',
+    `<span class="${late ? 'badc' : 'goodc'}">${late ? `−${Math.abs(t.delta)} min late` : `+${t.delta} min ahead`}</span>`,
+  )}${tipRow(
     'Driver fatigue',
     `<span style="color:${fc}">${fl} · ${t.fat}%</span>`,
-  )}${tipRow('Next', esc(t.next))}<div class="mute small" style="margin-top:.3rem">Scripted example</div></div>`;
+  )}${tipRow('Next', esc(t.next))}${tipRow('Load', esc(t.cargo))}</div>`;
 }
-const TRUCK_SRC = '/map-icons/truck.png';
+const TRUCK_SRC = '/map-icons/truck.svg';
 const WAREHOUSE_SRC = '/map-icons/warehouse.png';
 
 const tkIcon = (cls: string) =>
   L.divIcon({
     className: '',
     html: `<div class="tk tk-img ${cls}"><img src="${TRUCK_SRC}" alt="" draggable="false" /></div>`,
-    iconSize: [36, 36],
-    iconAnchor: [18, 18],
+    iconSize: [48, 30],
+    iconAnchor: [24, 15],
   });
 
 const whIcon = () =>
@@ -106,20 +113,23 @@ interface Props {
   options: OptionsResponse | null;
   probId: string;
   placeType: ObstacleType | null;
-  studioMode?: boolean;
   studioSession?: StudioSession | null;
   studioFocusAltId?: string | null;
-  studioPickingDest?: boolean;
-  studioSelectedTruckId?: string | null;
+  demoRouteKind?: RouteKind;
+  /** When true, keep drawing frozenPath instead of recomputed reroutes. */
+  reroutePending?: boolean;
+  frozenPath?: Array<[number, number]> | null;
+  /** After George is dispatched, hide the busy on-route network and focus his path. */
+  georgeDispatched?: boolean;
+  /** On-route trucks to draw / pick (includes George after dispatch). */
+  onRouteTrucks?: RouteTruck[];
   onSelect: (shipmentId: string) => void;
   onPickProb: (id: string) => void;
   onVerdict: (disruptionId: string, v: Verdict) => void;
   onPlaceCancel: () => void;
   onObstaclePlaced: (type: ObstacleType, lat: number, lng: number) => void;
   onObstacleRejected: (reason: string) => void;
-  onStudioPickTruck?: (truckId: string) => void;
-  onStudioPickDestination?: (lat: number, lng: number) => void;
-  onStudioCancelDest?: () => void;
+  onStudioObstacleRemove?: (obstacleId: string) => void;
 }
 
 function shipmentRoutes(board: Board | null) {
@@ -130,6 +140,48 @@ function shipmentRoutes(board: Board | null) {
   }));
 }
 
+function activeTrackRoutes(
+  board: Board | null,
+  selectedId: string | null | undefined,
+  session: StudioSession | null | undefined,
+  demoRouteKind?: RouteKind | null,
+): Array<{ shipmentId: string; latlngs: Array<[number, number]> }> {
+  const out: Array<{ shipmentId: string; latlngs: Array<[number, number]> }> = [];
+  const sid = selectedId ?? session?.truck_id ?? 'active';
+  const push = (geom: Array<[number, number]> | number[][] | undefined) => {
+    if (!geom?.length) return;
+    out.push({
+      shipmentId: sid,
+      latlngs: geom.map((pt) => [pt[0], pt[1]] as [number, number]),
+    });
+  };
+
+  // Always include George's job polyline so drops near the drawn road stick to it.
+  if (board && selectedId) {
+    const row = board.shipments.find((s) => s.id === selectedId);
+    if (row?.route.geometry?.length) push(row.route.geometry);
+  }
+  if (session) {
+    // Put the currently chosen solver path first so near-misses prefer that alignment.
+    if (demoRouteKind === 'fastest') {
+      push(session.alternatives.find((a) => a.slot === 'fastest')?.geometry);
+      push(session.baseline?.geometry);
+    } else {
+      push(session.alternatives.find((a) => a.slot === 'avoid')?.geometry);
+      push(session.baseline?.geometry);
+      push(session.alternatives.find((a) => a.slot === 'fastest')?.geometry);
+    }
+    for (const alt of session.alternatives) {
+      if (alt.feasible && alt.geometry?.length) push(alt.geometry);
+    }
+  }
+  if (out.length) return out;
+  const all = shipmentRoutes(board);
+  const filtered = all.filter((r) => !selectedId || r.shipmentId === selectedId);
+  return filtered.length ? filtered : all;
+}
+
+/** Magnet-snap onto the selected / visible track; always lands on the closest road point. */
 function trySnapPlace(
   type: ObstacleType,
   lat: number,
@@ -137,15 +189,19 @@ function trySnapPlace(
   board: Board | null,
   onPlaced: (type: ObstacleType, lat: number, lng: number) => void,
   onRejected: (reason: string) => void,
-  studioMode?: boolean,
+  session?: StudioSession | null,
+  selectedId?: string | null,
+  demoRouteKind?: RouteKind | null,
 ) {
-  if (studioMode) {
-    onPlaced(type, lat, lng);
+  const routes = activeTrackRoutes(board, selectedId, session, demoRouteKind);
+  if (!routes.length) {
+    onRejected('Select a shipment path first.');
     return;
   }
-  const hit = snapToNearestRoute(lat, lng, shipmentRoutes(board));
+  // Force onto the closest point of the active path(s).
+  const hit = snapToNearestRoute(lat, lng, routes, Number.POSITIVE_INFINITY);
   if (!hit) {
-    onRejected('Drop on a route.');
+    onRejected('Drop near the active route.');
     return;
   }
   onPlaced(type, hit.lat, hit.lng);
@@ -185,12 +241,11 @@ export function DispatchMap(p: Props) {
     };
   }, []);
 
-  // Terminals and warehouses (server). Hidden in Route studio (trucks-only start).
+  // Terminals and warehouses (always on the board).
   useEffect(() => {
     const g = groups.current.fix;
     if (!g || !p.network) return;
     g.clearLayers();
-    if (p.studioMode) return;
     for (const t of p.network.terminals) {
       L.marker([t.lat, t.lng], {
         icon: L.divIcon({
@@ -214,49 +269,59 @@ export function DispatchMap(p: Props) {
         )
         .addTo(g);
     }
-  }, [p.network, p.studioMode]);
+  }, [p.network]);
 
-  // Shipment routes and trucks (server), in the wired views.
+  // Active dispatch path + small truck fleet. Studio alternatives draw in the studio layer.
   useEffect(() => {
     const routes = groups.current.routes;
     const trucks = groups.current.trucks;
     if (!routes || !trucks) return;
     routes.clearLayers();
     trucks.clearLayers();
-    if (p.studioMode) {
-      if (!p.network) return;
-      for (const t of p.network.trucks) {
-        const sel = p.studioSelectedTruckId === t.id;
-        const m = L.marker([t.lat, t.lng], { icon: tkIcon(sel ? 'bad' : 'hollow'), zIndexOffset: sel ? 600 : 0 })
-          .bindTooltip(
-            `<div class="tip"><div class="th">${esc(t.driver_label)}</div>${tipRow('Truck', t.id)}${tipRow('Hours left', `${t.hours_available} h`)}<div class="mute small" style="margin-top:.3rem">Click to start a route</div></div>`,
-            { className: 'card-tip', direction: 'right' },
-          )
-          .addTo(trucks);
-        m.on('click', () => {
-          if (!allowShipmentSelect(cb.current.placeType)) return;
-          cb.current.onStudioPickTruck?.(t.id);
-        });
-      }
-      return;
-    }
     if (!p.board || p.view === 'prob') return;
-    for (const row of p.board.shipments) {
-      const st = ROUTE_STYLE[row.current.status];
-      L.polyline(row.route.geometry as L.LatLngTuple[], { color: '#fff', weight: st.weight + 5, opacity: 0.85, interactive: false }).addTo(routes);
-      L.polyline(row.route.geometry as L.LatLngTuple[], { ...st, opacity: p.view === 'go' ? 0.35 : 0.9, lineCap: 'butt' })
-        .bindTooltip(`<div class="tip"><div class="th">${row.id} → ${row.warehouse_id}</div><div>${esc(row.route.label)}</div></div>`, { className: 'card-tip', sticky: true })
-        .on('click', () => {
-          if (!allowShipmentSelect(cb.current.placeType)) return;
-          cb.current.onSelect(row.id);
+    const rows = p.board.shipments.filter((s) => isDemoShipment(s.id));
+    const active = p.selectedId ? rows.find((s) => s.id === p.selectedId) : null;
+    const simplified = Boolean(p.georgeDispatched);
+    // Before dispatch: whole demo fleet. After George is sent: keep his path in focus.
+    const georgeRow = rows.find((s) => s.id === 'C-102');
+    const toDraw = simplified ? (georgeRow ? [georgeRow] : []) : rows;
+    const hideBoardRoute = Boolean(p.studioSession && simplified);
+    if (!hideBoardRoute) {
+      for (const row of toDraw) {
+        const st = ROUTE_STYLE[row.current.status];
+        const on = simplified ? true : !p.selectedId || row.id === p.selectedId;
+        L.polyline(row.route.geometry as L.LatLngTuple[], {
+          color: '#fff',
+          weight: st.weight + 5,
+          opacity: on ? 0.85 : 0.25,
+          interactive: false,
+        }).addTo(routes);
+        L.polyline(row.route.geometry as L.LatLngTuple[], {
+          ...st,
+          opacity: on ? (p.view === 'go' ? 0.45 : 0.95) : 0.35,
+          lineCap: 'butt',
         })
-        .addTo(routes);
+          .bindTooltip(
+            `<div class="tip"><div class="th">${row.id} → ${row.warehouse_id}</div><div>${esc(row.route.label)}</div></div>`,
+            { className: 'card-tip', sticky: true },
+          )
+          .on('click', () => {
+            if (!allowShipmentSelect(cb.current.placeType)) return;
+            cb.current.onSelect(row.id);
+          })
+          .addTo(routes);
+      }
     }
     if (!p.network) return;
-    for (const t of p.network.trucks) {
-      const row = p.board.shipments.find((s) => s.current.truck_id === t.id);
-      const cls = !row ? 'hollow' : row.current.status === 'at_risk' ? 'bad' : row.current.status === 'tight' ? 'warn' : '';
-      const m = L.marker([t.lat, t.lng], { icon: tkIcon(cls) })
+    const fleet = p.network.trucks.filter((x) => isDemoTruck(x.id));
+    const showFleet = simplified
+      ? fleet.filter((t) => rows.some((s) => s.current.truck_id === t.id && (!active || s.id === active.id || s.id === 'C-102')))
+      : fleet;
+    for (const t of showFleet) {
+      const row = rows.find((s) => s.current.truck_id === t.id);
+      const sel = Boolean(row && row.id === p.selectedId);
+      const cls = !row ? 'hollow' : row.current.status === 'at_risk' ? 'bad' : row.current.status === 'tight' ? 'warn' : sel ? '' : '';
+      const m = L.marker([t.lat, t.lng], { icon: tkIcon(cls), zIndexOffset: sel ? 500 : 0 })
         .bindTooltip(truckTip(t.id, t.driver_label, t.hours_available, row), { className: 'card-tip', direction: 'right' })
         .addTo(trucks);
       if (row)
@@ -265,14 +330,13 @@ export function DispatchMap(p: Props) {
           cb.current.onSelect(row.id);
         });
     }
-  }, [p.board, p.network, p.view, p.studioMode, p.studioSelectedTruckId]);
+  }, [p.board, p.network, p.view, p.selectedId, p.studioSession, p.georgeDispatched]);
 
   // Conditions (server): unverified dashed indigo, confirmed solid red, dismissed thin grey.
   useEffect(() => {
     const g = groups.current.cond;
     if (!g) return;
     g.clearLayers();
-    if (p.studioMode) return;
     if (!p.board || p.view === 'prob') return;
     for (const d of p.board.disruptions) {
       if (!d.area) continue;
@@ -313,15 +377,16 @@ export function DispatchMap(p: Props) {
         bindVerdict(c);
       }
     }
-  }, [p.board, p.view, p.studioMode]);
+  }, [p.board, p.view]);
 
-  // Route studio session: OD markers, three alternatives, studio obstacles.
+  // Chosen demo route (fastest vs impact) + studio obstacles.
   useEffect(() => {
     const g = groups.current.studio;
     if (!g) return;
     g.clearLayers();
-    if (!p.studioMode || !p.studioSession) return;
+    if (!p.studioSession) return;
     const s = p.studioSession;
+    const kind: RouteKind = p.demoRouteKind ?? 'impact';
     const oLat = Number((s.origin as { lat?: number }).lat);
     const oLng = Number((s.origin as { lng?: number }).lng);
     const dLat = Number((s.destination as { lat?: number }).lat);
@@ -332,28 +397,78 @@ export function DispatchMap(p: Props) {
     if (Number.isFinite(dLat) && Number.isFinite(dLng)) {
       L.circleMarker([dLat, dLng], { radius: 8, color: INK, weight: 2, fillColor: BAD, fillOpacity: 0.9 }).addTo(g);
     }
-    for (const alt of s.alternatives) {
-      if (!alt.feasible || !alt.geometry?.length) continue;
-      const st = STUDIO_STYLE[alt.slot] ?? STUDIO_STYLE.fastest;
-      const focus = p.studioFocusAltId === alt.id;
-      const latlngs = alt.geometry.map((pt) => [pt[0], pt[1]] as L.LatLngTuple);
+    const basePath: DemoLatLng[] | null = (() => {
+      if (p.frozenPath?.length) return p.frozenPath;
+      if (p.board && p.selectedId) {
+        const row = p.board.shipments.find((r) => r.id === p.selectedId);
+        if (row?.route.geometry?.length) {
+          return row.route.geometry.map((pt) => [pt[0], pt[1]] as DemoLatLng);
+        }
+      }
+      const bl = s.baseline?.geometry ?? s.alternatives.find((a) => a.slot === 'fastest')?.geometry;
+      return bl?.length ? bl.map((pt) => [pt[0], pt[1]] as DemoLatLng) : null;
+    })();
+
+    const drawLine = (latlngs: L.LatLngTuple[], style: (typeof DEMO_ROUTE_STYLE)[RouteKind], emphasis: 'primary' | 'ghost' | 'blocked') => {
+      const opacity = emphasis === 'primary' ? 0.95 : emphasis === 'ghost' ? 0.35 : 0.55;
+      const weight = emphasis === 'primary' ? style.weight : style.weight - 1;
+      L.polyline(latlngs, { color: '#fff', weight: weight + 4, opacity: emphasis === 'ghost' ? 0.25 : 0.75, interactive: false }).addTo(g);
       L.polyline(latlngs, {
-        color: '#fff',
-        weight: (focus ? st.weight + 4 : st.weight) + 3,
-        opacity: 0.85,
-        interactive: false,
-      }).addTo(g);
-      L.polyline(latlngs, {
-        ...st,
-        weight: focus ? st.weight + 2 : st.weight,
-        opacity: focus || !p.studioFocusAltId ? 0.95 : 0.35,
+        color: emphasis === 'blocked' ? '#666' : style.color,
+        weight,
+        dashArray: emphasis === 'blocked' ? '4 6' : style.dashArray,
+        opacity,
         lineCap: 'butt',
       })
-        .bindTooltip(`<div class="tip"><div class="th">${esc(alt.label)}</div><div>${esc(alt.algorithm)}</div></div>`, {
+        .bindTooltip(`<div class="tip"><div class="th">${esc(style.label)}</div></div>`, {
           className: 'card-tip',
           sticky: true,
         })
         .addTo(g);
+    };
+
+    let fitLatLngs: L.LatLngTuple[] | null = null;
+
+    if (s.obstacles.length > 0 && basePath) {
+      const detours = demoRerouteGeometries(
+        basePath,
+        s.obstacles.map((o) => ({ lat: o.lat, lng: o.lng, radius_km: o.radius_km })),
+      );
+      if (detours) {
+        if (p.reroutePending) {
+          // Blocked original stays faint; both candidates visible so placement is obvious.
+          drawLine(basePath as L.LatLngTuple[], DEMO_ROUTE_STYLE[kind], 'blocked');
+          drawLine(detours.fastest as L.LatLngTuple[], DEMO_ROUTE_STYLE.fastest, 'ghost');
+          drawLine(detours.impact as L.LatLngTuple[], DEMO_ROUTE_STYLE.impact, 'ghost');
+          fitLatLngs = [...detours.fastest, ...detours.impact] as L.LatLngTuple[];
+        } else {
+          // Emphasize the selected card; keep the other faint for comparison.
+          const other: RouteKind = kind === 'fastest' ? 'impact' : 'fastest';
+          drawLine(detours[other] as L.LatLngTuple[], DEMO_ROUTE_STYLE[other], 'ghost');
+          drawLine(detours[kind] as L.LatLngTuple[], DEMO_ROUTE_STYLE[kind], 'primary');
+          fitLatLngs = detours[kind] as L.LatLngTuple[];
+        }
+      }
+    } else {
+      // No obstacle: single chosen path.
+      const st = DEMO_ROUTE_STYLE[kind];
+      let latlngs: L.LatLngTuple[] | null = null;
+      if (kind === 'impact' && p.board && p.selectedId) {
+        const row = p.board.shipments.find((r) => r.id === p.selectedId);
+        if (row?.route.geometry?.length) latlngs = row.route.geometry as L.LatLngTuple[];
+      }
+      if (!latlngs) {
+        const fastest = s.alternatives.find((a) => a.slot === 'fastest') ?? s.baseline;
+        const impact = s.alternatives.find((a) => a.slot === 'avoid') ?? fastest;
+        const chosen = kind === 'fastest' ? fastest : impact;
+        if (chosen?.feasible && chosen.geometry?.length) {
+          latlngs = chosen.geometry.map((pt) => [pt[0], pt[1]] as L.LatLngTuple);
+        }
+      }
+      if (latlngs?.length) {
+        drawLine(latlngs, st, 'primary');
+        fitLatLngs = latlngs;
+      }
     }
     for (const obs of s.obstacles) {
       L.circle([obs.lat, obs.lng], {
@@ -364,38 +479,79 @@ export function DispatchMap(p: Props) {
         fillOpacity: 0.12,
         interactive: false,
       }).addTo(g);
-      L.marker([obs.lat, obs.lng], {
+      const m = L.marker([obs.lat, obs.lng], {
         icon: obstacleMarkerIcon(obs.type as ObstacleType, 'confirmed'),
         zIndexOffset: 450,
       })
-        .bindTooltip(`<div class="tip"><div class="th">${esc(obs.label)}</div></div>`, { className: 'card-tip' })
+        .bindTooltip(
+          `<div class="tip"><div class="th">${esc(obs.label)}</div><div class="mute small">Click to remove</div></div>`,
+          { className: 'card-tip' },
+        )
+        .bindPopup(
+          `<div class="pop" style="min-width:11rem"><b>${esc(obs.label)}</b><div style="margin-top:.55rem"><button type="button" data-studio-obs-remove="${esc(obs.id)}">Remove obstacle</button></div></div>`,
+        )
         .addTo(g);
+      m.on('popupopen', (e: L.PopupEvent) => {
+        const root = e.popup.getElement();
+        if (!root) return;
+        root.onclick = (ev) => {
+          const id = (ev.target as HTMLElement).dataset.studioObsRemove;
+          if (!id) return;
+          ev.preventDefault();
+          map.current?.closePopup();
+          cb.current.onStudioObstacleRemove?.(id);
+        };
+      });
     }
     const m = map.current;
-    if (m && s.alternatives.some((a) => a.feasible && a.geometry.length)) {
-      const bounds = L.latLngBounds([]);
-      for (const alt of s.alternatives) {
-        if (!alt.feasible) continue;
-        for (const pt of alt.geometry) bounds.extend([pt[0], pt[1]] as L.LatLngTuple);
-      }
+    if (m && fitLatLngs?.length) {
+      const bounds = L.latLngBounds(fitLatLngs);
       if (bounds.isValid()) m.fitBounds(bounds, { padding: [40, 40], maxZoom: 11, animate: false });
     }
-  }, [p.studioMode, p.studioSession, p.studioFocusAltId]);
+  }, [p.studioSession, p.demoRouteKind, p.board, p.selectedId, p.reroutePending, p.frozenPath]);
 
-  // Scripted example trucks, only in the On route view.
+  // On-route trucks: full network on the initial map; after George is dispatched, only in On route view.
   useEffect(() => {
     const g = groups.current.scripted;
     if (!g) return;
     g.clearLayers();
-    if (p.view !== 'prob') return;
-    for (const t of ONROUTE) {
-      const pts = R(t.pair);
-      L.marker(pts[Math.floor(t.f * (pts.length - 1))], { icon: tkIcon(t.sit === 'ok' ? '' : t.sit) })
+    const fleet = p.onRouteTrucks?.length ? p.onRouteTrucks : ONROUTE;
+    const showOnMap = p.view === 'map' && !p.georgeDispatched;
+    if (p.view !== 'prob' && !showOnMap) return;
+    for (const t of fleet) {
+      const pts = (t.path?.length ? t.path : R(t.pair)) as L.LatLngTuple[];
+      if (pts.length < 2) continue;
+      // Draw every in-use route before dispatch so the map looks busy.
+      if (showOnMap || p.view === 'prob') {
+        const isRerouted = Boolean(t.path?.length);
+        L.polyline(pts, {
+          color: '#fff',
+          weight: 7,
+          opacity: showOnMap ? 0.55 : 0.85,
+          interactive: false,
+        }).addTo(g);
+        L.polyline(pts, {
+          color: isRerouted ? (t.sitT === 'Rerouted' ? '#1a5f8a' : GOOD) : t.sit === 'ok' ? GOOD : t.sit === 'warn' ? INK : BAD,
+          weight: showOnMap ? 3.5 : isRerouted ? 5.5 : 5,
+          opacity: showOnMap ? 0.75 : 0.95,
+          dashArray: isRerouted ? (t.short.includes('Env') ? '10 6' : undefined) : t.sit === 'ok' ? undefined : '8 6',
+          lineCap: 'butt',
+        })
+          .bindTooltip(
+            `<div class="tip"><div class="th">${esc(t.drv)} · ${esc(t.id)}</div><div>${esc(t.short)}</div><div class="mute small">${esc(t.cargo)}</div>${
+              isRerouted ? '<div class="mute small">Submitted reroute</div>' : ''
+            }</div>`,
+            { className: 'card-tip', sticky: true },
+          )
+          .on('click', () => cb.current.onPickProb(t.id))
+          .addTo(g);
+      }
+      L.marker(pts[Math.floor(t.f * (pts.length - 1))], { icon: tkIcon(t.sit === 'ok' || t.sitT === 'Rerouted' ? '' : t.sit) })
         .bindTooltip(scriptedTip(t), { className: 'card-tip', direction: 'right' })
         .on('click', () => cb.current.onPickProb(t.id))
         .addTo(g);
     }
-  }, [p.view]);
+  }, [p.view, p.georgeDispatched, p.onRouteTrucks]);
 
   const fitRef = useRef(() => {});
   fitRef.current = () => {
@@ -424,14 +580,23 @@ export function DispatchMap(p: Props) {
       if (wh) L.circleMarker([wh.lat, wh.lng], { radius: 18, color: INK, weight: 2, fill: false, dashArray: '3 4' }).addTo(g);
       m.fitBounds(bounds, { padding: [25, 25], maxZoom: 11, animate: false });
     } else if (view === 'prob') {
-      const t = ONROUTE.find((x) => x.id === probId)!;
-      const has = PROB[t.id].opts.length > 0;
-      L.polyline(R(t.pair, 'eff'), { color: '#fff', weight: 10, opacity: 0.9, interactive: false }).addTo(g);
-      L.polyline(R(t.pair, 'eff'), { color: INK, weight: 5, interactive: false }).addTo(g);
-      if (has) L.polyline(R(t.pair, 'sus'), { color: INK, weight: 4, dashArray: '10 8' }).bindTooltip('Reroute option (scripted)').addTo(g);
-      const pts = R(t.pair);
-      L.circleMarker(pts[Math.floor(t.f * (pts.length - 1))], { radius: 18, color: has ? BAD : GOOD, weight: 3, fill: false }).addTo(g);
-      m.fitBounds(L.latLngBounds(R(t.pair, 'eff')), { padding: [25, 25], maxZoom: 11, animate: false });
+      const fleet = cb.current.onRouteTrucks?.length ? cb.current.onRouteTrucks : ONROUTE;
+      const t = fleet.find((x) => x.id === probId) ?? fleet[0];
+      if (!t) return;
+      const has = (PROB[t.id]?.opts.length ?? 0) > 0;
+      const main = (t.path?.length ? t.path : R(t.pair, 'eff')) as L.LatLngTuple[];
+      L.polyline(main, { color: '#fff', weight: 10, opacity: 0.9, interactive: false }).addTo(g);
+      L.polyline(main, {
+        color: t.path?.length ? '#1a5f8a' : INK,
+        weight: 5,
+        dashArray: t.path?.length && t.short.includes('Env') ? '10 6' : undefined,
+        interactive: false,
+      }).addTo(g);
+      if (has && !t.path?.length) {
+        L.polyline(R(t.pair, 'sus'), { color: INK, weight: 4, dashArray: '10 8' }).bindTooltip('Faster / alternate route').addTo(g);
+      }
+      L.circleMarker(main[Math.floor(t.f * (main.length - 1))], { radius: 18, color: has ? BAD : GOOD, weight: 3, fill: false }).addTo(g);
+      m.fitBounds(L.latLngBounds(main), { padding: [25, 25], maxZoom: 11, animate: false });
     } else if (view === 'map') {
       m.setView(HOME.c, HOME.z);
     } else {
@@ -471,7 +636,9 @@ export function DispatchMap(p: Props) {
         cb.current.board,
         cb.current.onObstaclePlaced,
         cb.current.onObstacleRejected,
-        cb.current.studioMode,
+        cb.current.studioSession,
+        cb.current.selectedId,
+        cb.current.demoRouteKind,
       );
     };
     node.addEventListener('dragover', onDragOver);
@@ -496,7 +663,9 @@ export function DispatchMap(p: Props) {
         cb.current.board,
         cb.current.onObstaclePlaced,
         cb.current.onObstacleRejected,
-        cb.current.studioMode,
+        cb.current.studioSession,
+        cb.current.selectedId,
+        cb.current.demoRouteKind,
       );
       cb.current.onPlaceCancel();
     };
@@ -512,27 +681,6 @@ export function DispatchMap(p: Props) {
       window.removeEventListener('keydown', onKey);
     };
   }, [p.placeType]);
-
-  // Route studio: pick destination after a truck is selected.
-  useEffect(() => {
-    const m = map.current;
-    if (!m || !p.studioMode || !p.studioPickingDest || p.placeType) return;
-    const onClick = (e: L.LeafletMouseEvent) => {
-      L.DomEvent.stopPropagation(e);
-      cb.current.onStudioPickDestination?.(e.latlng.lat, e.latlng.lng);
-    };
-    const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') cb.current.onStudioCancelDest?.();
-    };
-    m.getContainer().style.cursor = 'crosshair';
-    m.on('click', onClick);
-    window.addEventListener('keydown', onKey);
-    return () => {
-      m.getContainer().style.cursor = '';
-      m.off('click', onClick);
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [p.studioMode, p.studioPickingDest, p.placeType]);
 
   return <div id="map" ref={el} role="region" aria-label="Map of trucks, routes and road conditions" />;
 }

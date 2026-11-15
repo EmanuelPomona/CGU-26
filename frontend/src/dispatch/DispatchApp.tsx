@@ -2,8 +2,8 @@
 // view is a scripted example. The browser never ranks options or computes a figure.
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
-  ApiError, addStudioObstacle, createDecision, createDisruption, createStudioSession, deleteDecision, deleteDisruption,
-  getNetwork, getOptions, getPresets, updateDisruption,
+  ApiError, addStudioObstacle, createDecision, createStudioSession, deleteDecision, deleteDisruption,
+  deleteStudioObstacle, getNetwork, getOptions, getPresets, updateDisruption,
 } from '../api/client';
 import type {
   Board, Decision, Disruption, Network, OptionsResponse, Preset, ResponseOption, ShipmentRow, StudioSession,
@@ -11,18 +11,29 @@ import type {
 import { useBoard } from '../api/useBoard';
 import { DispatchMap, type Verdict, type View } from './DispatchMap';
 import { ObstaclePalette } from './ObstaclePalette';
-import { toDisruptionCreate, type ObstacleType } from './obstacleCatalog';
+import { type ObstacleType } from './obstacleCatalog';
 import { showObstaclePalette } from './placeMode';
+import { DemoRoutePanel } from './DemoRoutePanel';
+import { demoJobFor, type RouteKind } from './demoRoutes';
+import { defaultDemoShipmentId, isDemoShipment } from './fleetScope';
 import { RouteStudio } from './RouteStudio';
-import { BAD, GOOD, INK, OBJ, ONROUTE, PROB, ROLE, ROLE_ORDER, fatLbl, type RoleKey, type Tag } from './data';
+import { storyForShipment } from './storyCases';
+import { cargoStatusChip, cargoStatusFor, cargoStatusLabel } from './cargoStatus';
+import { demoRerouteGeometries } from './demoDetours';
+import {
+  BAD, GOOD, GEORGE_ONROUTE, INK, OBJ, ONROUTE, PROB, ROLE, ROLE_ORDER, fatLbl, type RoleKey, type RouteTruck, type Tag,
+} from './data';
 import './dispatch.css';
 
-const SCRIPTED_LINE = 'Scripted explanation from the rule-based score.';
 const esc = (s: string) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'The request failed.');
 const clock = (m: number) => {
   const h = Math.floor(m / 60) % 24;
   return `${h % 12 || 12}:${String(Math.round(m) % 60).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+};
+const clockDate = (d: Date) => {
+  const h = d.getHours();
+  return `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
 };
 const STATUS = { on_time: ['On time', 'ok'], tight: ['Tight', 'warn'], at_risk: ['At risk', 'bad'] } as const;
 const STAKE = { driver: 'Driver', residents: 'Residents', warehouse: 'Warehouse', other_customer: 'Other customer', company: 'Company' } as const;
@@ -196,22 +207,6 @@ function CompareMenu({ board }: { board: Board }) {
   );
 }
 
-/** "Explain this option": assembled only from the server's text for that option. */
-function explain(o: ResponseOption, rationale: string): string[] {
-  const out: string[] = [];
-  if (o.suggested) out.push(rationale);
-  out.push(o.description);
-  out.push(o.evaluation.community_detail);
-  for (const b of o.burdens) {
-    const who = STAKE[b.stakeholder];
-    out.push(b.text.toLowerCase().startsWith(who.toLowerCase()) ? b.text : `${who}: ${b.text}`);
-  }
-  out.push(...o.notes);
-  out.push(...o.evaluation.flags);
-  if (!o.feasible && o.infeasible_reason) out.push(o.infeasible_reason);
-  return out.filter(Boolean);
-}
-
 /* ---------- app ---------- */
 export default function DispatchApp() {
   const bs = useBoard();
@@ -230,25 +225,37 @@ export default function DispatchApp() {
   const [reason, setReason] = useState('');
   const [reasonError, setReasonError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [explainId, setExplainId] = useState<string | null>(null);
   const [probId, setProbId] = useState('T-11');
   const [probOpen, setProbOpen] = useState<number | null>(null);
-  const [probOpt, setProbOpt] = useState<number | null>(null);
-  const [sideTab, setSideTab] = useState<'chat' | 'explain'>('chat');
   const [driverMsgs, setDriverMsgs] = useState<Record<string, Msg[]>>({});
+  const [georgeDispatched, setGeorgeDispatched] = useState(false);
+  const [now, setNow] = useState(() => new Date());
   const [legendOpen, setLegendOpen] = useState(false);
   const [placeType, setPlaceType] = useState<ObstacleType | null>(null);
   const [toastText, setToastText] = useState('');
   const [copied, setCopied] = useState(false);
-  const [studioMode, setStudioMode] = useState(false);
   const [studioSession, setStudioSession] = useState<StudioSession | null>(null);
-  const [studioTruckId, setStudioTruckId] = useState<string | null>(null);
-  const [studioPickingDest, setStudioPickingDest] = useState(false);
   const [studioFocusAltId, setStudioFocusAltId] = useState<string | null>(null);
   const [studioBusy, setStudioBusy] = useState(false);
   const [studioError, setStudioError] = useState<string | null>(null);
+  const [chosenByShipment, setChosenByShipment] = useState<Record<string, RouteKind>>({});
+  const [reroutePending, setReroutePending] = useState(false);
+  const [frozenPath, setFrozenPath] = useState<Array<[number, number]> | null>(null);
+  const [rerouteSubmitted, setRerouteSubmitted] = useState(false);
+  const [georgeSubmittedPath, setGeorgeSubmittedPath] = useState<Array<[number, number]> | null>(null);
+  const [georgeSubmittedKind, setGeorgeSubmittedKind] = useState<RouteKind | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
   const optSeq = useRef(0);
+
+  useEffect(() => {
+    const tick = () => setNow(new Date());
+    tick();
+    const id = window.setInterval(tick, 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const georgeWindowEnd = new Date(now.getTime() + 90 * 60_000);
+  const georgeWindowLabel = `${clockDate(now)} to ${clockDate(georgeWindowEnd)}`;
 
   const toast = useCallback((t: string) => {
     setToastText(t);
@@ -263,10 +270,25 @@ export default function DispatchApp() {
   }, []);
   useEffect(loadStatic, [loadStatic]);
 
-  // Default selection for the demo: C-103 when present.
+  // Default to Case 1 (George · POLB → Claremont) on the map.
   useEffect(() => {
-    if (board && !selectedId) setSelectedId(board.shipments.find((s) => s.id === 'C-103')?.id ?? board.shipments[0]?.id ?? null);
-  }, [board, selectedId]);
+    if (!board || selectedId) return;
+    const demo = board.shipments
+      .filter((s) => isDemoShipment(s.id) && !(georgeDispatched && s.id === 'C-102'))
+      .map((s) => s.id);
+    const id = defaultDemoShipmentId(demo);
+    if (id) {
+      setSelectedId(id);
+      setView('map');
+    }
+  }, [board, selectedId, georgeDispatched]);
+
+  // On To dispatch, don't keep a selection that already left for On route.
+  useEffect(() => {
+    if (view !== 'go' || !georgeDispatched || selectedId !== 'C-102') return;
+    const next = board?.shipments.find((s) => isDemoShipment(s.id) && s.id !== 'C-102');
+    setSelectedId(next?.id ?? null);
+  }, [view, georgeDispatched, selectedId, board]);
 
   const loadOptions = useCallback(async (id: string) => {
     const n = ++optSeq.current;
@@ -288,7 +310,6 @@ export default function DispatchApp() {
     setOpenKey('efficiency');
     setPickedId(null);
     setReasonFor(null);
-    setExplainId(null);
     setView('go');
   };
 
@@ -304,66 +325,121 @@ export default function DispatchApp() {
     if (v === 'delete') return run(() => deleteDisruption(id), 'Report removed');
     return run(() => updateDisruption(id, { verification: v }), v === 'dismissed' ? 'Marked open: figures back to normal' : v === 'confirmed' ? 'Confirmed' : 'Back to unverified');
   };
-  const clearStudio = useCallback(() => {
-    setStudioSession(null);
-    setStudioTruckId(null);
-    setStudioPickingDest(false);
-    setStudioFocusAltId(null);
+  // To dispatch sets the path: truck → warehouse becomes the board session for obstacles / reroutes.
+  const pathKey = (() => {
+    const row = board?.shipments.find((s) => s.id === selectedId);
+    if (!row?.current.truck_id || !network) return null;
+    const wh = network.warehouses.find((w) => w.id === row.warehouse_id);
+    if (!wh) return null;
+    return `${row.id}|${row.current.truck_id}|${wh.id}|${wh.lat}|${wh.lng}`;
+  })();
+
+  useEffect(() => {
+    if (!pathKey) {
+      setStudioSession(null);
+      setStudioFocusAltId(null);
+      setStudioError(null);
+      setStudioBusy(false);
+      return;
+    }
+    const [, truckId, , latS, lngS] = pathKey.split('|');
+    const lat = Number(latS);
+    const lng = Number(lngS);
+    let cancelled = false;
+    setStudioBusy(true);
     setStudioError(null);
-    setStudioBusy(false);
-    setPlaceType(null);
-  }, []);
+    setStudioFocusAltId(null);
+    setStudioSession(null);
+    setReroutePending(false);
+    setFrozenPath(null);
+    void createStudioSession({ truck_id: truckId, destination: { lat, lng } })
+      .then((session) => {
+        if (!cancelled) setStudioSession(session);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setStudioSession(null);
+          setStudioError(msg(e));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setStudioBusy(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pathKey]);
 
   const placeObstacle = async (type: ObstacleType, lat: number, lng: number) => {
     setPlaceType(null);
-    if (studioMode) {
-      if (!studioSession) {
-        toast('Pick truck and destination first.');
-        return;
-      }
-      setStudioBusy(true);
-      setStudioError(null);
-      try {
-        const next = await addStudioObstacle(studioSession.id, { type, lat, lng });
-        setStudioSession(next);
-        setStudioFocusAltId(null);
-        toast('Obstacle placed — routes updated');
-      } catch (e) {
-        setStudioError(msg(e));
-        toast(msg(e));
-      } finally {
-        setStudioBusy(false);
-      }
+    if (!studioSession) {
+      toast('Select a shipment in To dispatch first.');
       return;
     }
-    await run(() => createDisruption(toDisruptionCreate(type, lat, lng)), 'Obstacle placed');
-  };
-
-  const onStudioPickTruck = (truckId: string) => {
-    setStudioSession(null);
-    setStudioFocusAltId(null);
+    const kindNow: RouteKind =
+      (selectedId && chosenByShipment[selectedId]) || demoJobFor(selectedId)?.chosenKind || 'impact';
+    let keep = frozenPath;
+    if (!keep?.length) {
+      if (kindNow === 'impact' && selectedId && board) {
+        const row = board.shipments.find((s) => s.id === selectedId);
+        if (row?.route.geometry?.length) {
+          keep = row.route.geometry.map((pt) => [pt[0], pt[1]] as [number, number]);
+        }
+      }
+      if (!keep?.length) {
+        const alt =
+          kindNow === 'fastest'
+            ? studioSession.alternatives.find((a) => a.slot === 'fastest') ?? studioSession.baseline
+            : studioSession.alternatives.find((a) => a.slot === 'avoid') ?? studioSession.baseline;
+        if (alt?.geometry?.length) {
+          keep = alt.geometry.map((pt) => [pt[0], pt[1]] as [number, number]);
+        } else if (studioSession.baseline?.geometry?.length) {
+          keep = studioSession.baseline.geometry.map((pt) => [pt[0], pt[1]] as [number, number]);
+        }
+      }
+    }
+    setStudioBusy(true);
     setStudioError(null);
-    setStudioTruckId(truckId);
-    setStudioPickingDest(true);
+    setView('map');
+    try {
+      const next = await addStudioObstacle(studioSession.id, { type, lat, lng });
+      setStudioSession(next);
+      setStudioFocusAltId(null);
+      // Do not auto-switch the drawn path — wait for an explicit reroute choice.
+      if (keep?.length) setFrozenPath(keep);
+      setReroutePending(true);
+      setRerouteSubmitted(false);
+      toast(
+        type === 'road_closure'
+          ? 'Road closure on path — preview a reroute, then Submit'
+          : 'Obstacle placed — preview a reroute, then Submit',
+      );
+    } catch (e) {
+      setStudioError(msg(e));
+      toast(msg(e));
+    } finally {
+      setStudioBusy(false);
+    }
   };
 
-  const onStudioCancelDest = () => {
-    setStudioPickingDest(false);
-    setStudioTruckId(null);
-  };
-
-  const onStudioPickDestination = async (lat: number, lng: number) => {
-    if (!studioTruckId) return;
-    setStudioPickingDest(false);
+  const removeObstacle = async (obstacleId: string) => {
+    if (!studioSession) return;
     setStudioBusy(true);
     setStudioError(null);
     try {
-      const session = await createStudioSession({ truck_id: studioTruckId, destination: { lat, lng } });
-      setStudioSession(session);
-      toast('Route session ready');
+      const next = await deleteStudioObstacle(studioSession.id, obstacleId);
+      setStudioSession(next);
+      setStudioFocusAltId(null);
+      if (next.obstacles.length === 0) {
+        setReroutePending(false);
+        setFrozenPath(null);
+        toast('Obstacle removed');
+      } else {
+        setReroutePending(true);
+        toast('Obstacle removed — still choose a reroute if needed');
+      }
     } catch (e) {
       setStudioError(msg(e));
-      setStudioPickingDest(true);
       toast(msg(e));
     } finally {
       setStudioBusy(false);
@@ -371,12 +447,8 @@ export default function DispatchApp() {
   };
 
   useEffect(() => {
-    if (!showObstaclePalette(view, { studioMode, hasStudioSession: Boolean(studioSession) })) setPlaceType(null);
-  }, [view, studioMode, studioSession]);
-
-  useEffect(() => {
-    if (!studioMode) clearStudio();
-  }, [studioMode, clearStudio]);
+    if (!showObstaclePalette(view, { hasActivePath: Boolean(studioSession) })) setPlaceType(null);
+  }, [view, studioSession]);
 
   const decide = async (o: ResponseOption, why?: string) => {
     if (!selectedId) return;
@@ -423,13 +495,114 @@ export default function DispatchApp() {
   const needsAttention = row?.attention === 'act' || row?.attention === 'watch';
   const others =
     opts?.options.filter((x) => x.roles.length === 0 && (x.suggested || x.kind === 'keep' || x.kind === 'reroute' || needsAttention)) ?? [];
-  const explainOpt = opts?.options.find((x) => x.id === explainId) ?? null;
-  const t = ONROUTE.find((x) => x.id === probId)!;
-  const p = PROB[probId];
-  const trMsgs: Msg[] = driverMsgs[probId] ?? p.chat.map(([kind, time, text]) => ({ kind, html: esc(text), time: `${time} AM` }));
-  const addDriverMsg = (m: Msg) => setDriverMsgs((all) => ({ ...all, [probId]: [...(all[probId] ?? trMsgs), m] }));
-  const problems = ONROUTE.filter((x) => x.prob).length;
-  const cls = `dapp ${view === 'map' || studioMode ? 'home' : 'work'} ${view === 'net' && !studioMode ? 'net' : ''}${studioMode ? ' studio' : ''}`;
+  const georgeOnRoute: RouteTruck = {
+    ...GEORGE_ONROUTE,
+    next: `Claremont window ${georgeWindowLabel}`,
+    sitT: georgeSubmittedPath ? 'Rerouted' : 'En route',
+    short: georgeSubmittedPath
+      ? georgeSubmittedKind === 'impact'
+        ? 'Env & community detour → Claremont'
+        : 'Fastest detour → Claremont'
+      : 'Port of Long Beach → Claremont',
+    path: georgeSubmittedPath ?? undefined,
+  };
+  const onRouteTrucks: RouteTruck[] = georgeDispatched ? [georgeOnRoute, ...ONROUTE] : ONROUTE;
+  const t = onRouteTrucks.find((x) => x.id === probId) ?? onRouteTrucks[0]!;
+  const p = PROB[t.id] ?? PROB[GEORGE_ONROUTE.id];
+  const trMsgs: Msg[] =
+    driverMsgs[t.id] ??
+    p.chat.map(([kind, time, text]) => ({
+      kind,
+      html: esc(
+        t.id === GEORGE_ONROUTE.id && text.includes('window')
+          ? `Rolling. Window is ${georgeWindowLabel}.`
+          : text,
+      ),
+      time: time === 'now' ? clockDate(now) : `${time} AM`,
+    }));
+  const addDriverMsg = (m: Msg) => setDriverMsgs((all) => ({ ...all, [t.id]: [...(all[t.id] ?? trMsgs), m] }));
+  const onRouteCount = onRouteTrucks.length;
+  const onRouteAlerts = onRouteTrucks.filter((x) => x.prob || x.delta < 0).length;
+  const demoShipments =
+    board?.shipments.filter(
+      (s) => isDemoShipment(s.id) && !(georgeDispatched && s.id === 'C-102'),
+    ) ?? [];
+  const activeStory = storyForShipment(selectedId);
+  const activeJob = demoJobFor(selectedId);
+  const chosenKind: RouteKind =
+    (selectedId && chosenByShipment[selectedId]) || activeJob?.chosenKind || 'impact';
+  const setChosenKind = (kind: RouteKind) => {
+    if (!selectedId) return;
+    setChosenByShipment((prev) => ({ ...prev, [selectedId]: kind }));
+    if (reroutePending || (studioSession?.obstacles.length ?? 0) > 0) {
+      setReroutePending(false);
+      setRerouteSubmitted(false);
+      // Keep frozenPath as the blocked base so detours stay anchored to where the obstacle sits.
+      toast(
+        kind === 'impact'
+          ? 'Preview: environment & community detour'
+          : 'Preview: fastest arrival detour',
+      );
+      return;
+    }
+    toast(
+      kind === 'impact'
+        ? 'Map: environment & community minimized'
+        : 'Map: fastest route',
+    );
+  };
+  const submitReroute = () => {
+    if (!studioSession?.obstacles.length) return;
+    const kind =
+      (selectedId && chosenByShipment[selectedId]) ||
+      activeJob?.chosenKind ||
+      chosenKind;
+    const base =
+      frozenPath ??
+      (selectedId && board
+        ? board.shipments
+            .find((s) => s.id === selectedId)
+            ?.route.geometry?.map((pt) => [pt[0], pt[1]] as [number, number])
+        : null);
+    if (!base?.length) {
+      toast('No path to reroute.');
+      return;
+    }
+    const detours = demoRerouteGeometries(
+      base,
+      studioSession.obstacles.map((o) => ({ lat: o.lat, lng: o.lng, radius_km: o.radius_km })),
+    );
+    if (!detours) {
+      toast('Could not build detour.');
+      return;
+    }
+    const geom = detours[kind];
+    setGeorgeSubmittedPath(geom);
+    setGeorgeSubmittedKind(kind);
+    setRerouteSubmitted(true);
+    setReroutePending(false);
+    setGeorgeDispatched(true);
+    setProbId(GEORGE_ONROUTE.id);
+    if (selectedId) setChosenByShipment((prev) => ({ ...prev, [selectedId]: kind }));
+    toast(
+      kind === 'impact'
+        ? 'Reroute submitted: environment & community'
+        : 'Reroute submitted: fastest arrival',
+    );
+    setView('prob');
+  };
+  const cls = `dapp ${view === 'map' ? 'home' : 'work'} ${view === 'net' ? 'net' : ''}${studioSession ? ' studio' : ''}`;
+  const routeHeadline = (s: ShipmentRow) => {
+    const story = storyForShipment(s.id);
+    if (story) return `${story.originLabel} → ${story.destinationLabel}`;
+    return `${s.terminal_id} → ${whName(s.warehouse_id)}`;
+  };
+  const driverHeadline = (s: ShipmentRow) => {
+    const story = storyForShipment(s.id);
+    return story ? story.driverName : driverOf(s);
+  };
+  const chosenLabel =
+    chosenKind === 'impact' ? 'Environment & community minimized' : 'Fastest route';
 
   const roleCard = ({ role, o }: { role: RoleKey; o: ResponseOption | null }, idx: number) => {
     const st = ROLE[role];
@@ -541,9 +714,6 @@ export default function DispatchApp() {
           )}
           <div className="src">Roads: OpenStreetMap · figures: rule-based estimates from simulated inputs</div>
         </div>
-        <div className="acts">
-          <button className="btn ask" onClick={() => setExplainId(o.id)}>Explain this option</button>
-        </div>
       </Acc>
     );
   };
@@ -551,31 +721,18 @@ export default function DispatchApp() {
   return (
     <div className={cls}>
       <div className="top">
-        <span className="brand">Dispatch</span>
+        <span className="brand">Dispatch.AI</span>
         <nav className="nav" aria-label="Views">
-          <button className={view === 'map' ? 'on' : ''} onClick={() => { setStudioMode(false); setView('map'); }}>Map</button>
-          <button className={view === 'go' ? 'on' : ''} onClick={() => { setStudioMode(false); setView('go'); }}>
-            To dispatch<span className="n">{board?.shipments.length ?? 0}</span>
+          <button className={view === 'map' ? 'on' : ''} onClick={() => setView('map')}>Map</button>
+          <button className={view === 'go' ? 'on' : ''} onClick={() => setView('go')}>
+            To dispatch<span className="n">{demoShipments.length}</span>
           </button>
-          <button className={view === 'prob' ? 'on' : ''} onClick={() => { setStudioMode(false); setView('prob'); }}>
-            On route<span className="n alert">{problems}</span>
+          <button className={view === 'prob' ? 'on' : ''} onClick={() => setView('prob')}>
+            On route<span className={`n${onRouteAlerts > 0 ? ' alert' : ''}`}>{onRouteCount}</span>
           </button>
-          <button className={view === 'net' ? 'on' : ''} onClick={() => { setStudioMode(false); setView('net'); }}>Network</button>
+          <button className={view === 'net' ? 'on' : ''} onClick={() => setView('net')}>Network</button>
         </nav>
-        <div className="mode-toggle" role="group" aria-label="Workspace">
-          <button type="button" className={!studioMode ? 'on' : ''} onClick={() => setStudioMode(false)}>Board</button>
-          <button
-            type="button"
-            className={studioMode ? 'on' : ''}
-            onClick={() => {
-              setStudioMode(true);
-              setView('map');
-            }}
-          >
-            Route studio
-          </button>
-        </div>
-        <span className="clock">{board ? clock(board.settings.clock_min) : ''}</span>
+        <span className="clock">{clockDate(now)}</span>
       </div>
 
       <div id="mapwrap">
@@ -588,11 +745,13 @@ export default function DispatchApp() {
           options={opts}
           probId={probId}
           placeType={placeType}
-          studioMode={studioMode}
           studioSession={studioSession}
           studioFocusAltId={studioFocusAltId}
-          studioPickingDest={studioPickingDest}
-          studioSelectedTruckId={studioTruckId}
+          demoRouteKind={chosenKind}
+          reroutePending={reroutePending}
+          frozenPath={frozenPath}
+          georgeDispatched={georgeDispatched}
+          onRouteTrucks={onRouteTrucks}
           onSelect={select}
           onPickProb={(id) => {
             setProbId(id);
@@ -602,38 +761,61 @@ export default function DispatchApp() {
           onPlaceCancel={() => setPlaceType(null)}
           onObstaclePlaced={placeObstacle}
           onObstacleRejected={(reason) => toast(reason)}
-          onStudioPickTruck={onStudioPickTruck}
-          onStudioPickDestination={onStudioPickDestination}
-          onStudioCancelDest={onStudioCancelDest}
+          onStudioObstacleRemove={removeObstacle}
         />
         <button id="expand" onClick={() => setView('map')}>Expand map</button>
-        {showObstaclePalette(view, { studioMode, hasStudioSession: Boolean(studioSession) }) && (
-          <ObstaclePalette selected={placeType} onSelect={setPlaceType} disabled={studioMode ? !studioSession : !board} />
+        {showObstaclePalette(view, { hasActivePath: Boolean(studioSession) }) && (
+          <ObstaclePalette selected={placeType} onSelect={setPlaceType} disabled={!studioSession} />
         )}
-        {studioMode && (
+        {view === 'map' && activeStory && (
+          <div className="story-banner" role="status" title={activeStory.blurb}>
+            <span className="story-case">{activeStory.driveLabel}</span>
+            <strong>{activeStory.driverName}</strong>
+            <span className="story-sep" aria-hidden="true">
+              ·
+            </span>
+            <span className="story-route">
+              {activeStory.originLabel} → {activeStory.destinationLabel}
+            </span>
+            <span className="story-sep" aria-hidden="true">
+              ·
+            </span>
+            <span className="story-route">{reroutePending ? 'Blocked — choose a reroute' : chosenLabel}</span>
+          </div>
+        )}
+        {view === 'map' && studioSession && (
           <RouteStudio
             session={studioSession}
-            pickingDest={studioPickingDest}
-            selectedTruckId={studioTruckId}
-            focusAltId={studioFocusAltId}
             busy={studioBusy}
             error={studioError}
-            onFocusAlt={setStudioFocusAltId}
-            onClear={clearStudio}
+            story={activeStory}
+            chosenKind={chosenKind}
+            reroutePending={reroutePending}
+            canSubmitReroute={
+              Boolean(studioSession?.obstacles.length) &&
+              !reroutePending &&
+              !rerouteSubmitted &&
+              Boolean(selectedId && chosenByShipment[selectedId])
+            }
+            rerouteSubmitted={rerouteSubmitted}
+            shipmentId={selectedId}
+            onChoose={setChosenKind}
+            onSubmitReroute={submitReroute}
+            onClear={() => setView('go')}
+            onRemoveObstacle={removeObstacle}
           />
         )}
-        {view === 'map' && !studioMode && board && <CompareMenu board={board} />}
+        {view === 'map' && board && <CompareMenu board={board} />}
         <div className={`legend ${legendOpen ? 'open' : ''}`}>
           <button className="lt" aria-expanded={legendOpen} onClick={() => setLegendOpen((o) => !o)}>
             Legend {legendOpen ? '−' : '+'}
           </button>
           <div className="lb">
-            {studioMode ? (
+            {studioSession ? (
               <>
-                <h5>Studio routes</h5>
-                <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke="#0a7a3e" strokeWidth="4" /></svg>Fastest</div>
-                <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke="#1a4a8a" strokeWidth="4" strokeDasharray="7 4" /></svg>Direct</div>
-                <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke="#8a4a10" strokeWidth="4" strokeDasharray="1 4" strokeLinecap="round" /></svg>Avoid hazards</div>
+                <h5>Reroute paths</h5>
+                <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke="#0a7a3e" strokeWidth="5" /></svg>Fastest (solid green)</div>
+                <div><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke="#1a5f8a" strokeWidth="5" strokeDasharray="10 6" /></svg>Env & community (dashed blue)</div>
               </>
             ) : (
               <>
@@ -653,10 +835,10 @@ export default function DispatchApp() {
             <h5>Places</h5>
             <div><span className="leg-wh"><img src="/map-icons/warehouse.png" alt="" /></span>Warehouse</div>
             <h5>Trucks</h5>
-            <div><span className="leg-tk"><img src="/map-icons/truck.png" alt="" /></span>On time</div>
-            <div><span className="leg-tk warn"><img src="/map-icons/truck.png" alt="" /></span>Tight</div>
-            <div><span className="leg-tk bad"><img src="/map-icons/truck.png" alt="" /></span>At risk</div>
-            <div><span className="leg-tk hollow"><img src="/map-icons/truck.png" alt="" /></span>Spare</div>
+            <div><span className="leg-tk"><img src="/map-icons/truck.svg" alt="" /></span>On time</div>
+            <div><span className="leg-tk warn"><img src="/map-icons/truck.svg" alt="" /></span>Tight</div>
+            <div><span className="leg-tk bad"><img src="/map-icons/truck.svg" alt="" /></span>At risk</div>
+            <div><span className="leg-tk hollow"><img src="/map-icons/truck.svg" alt="" /></span>Spare</div>
           </div>
         </div>
       </div>
@@ -685,26 +867,31 @@ export default function DispatchApp() {
         <div className="col list">
           <div className="pick">
             {view === 'go' &&
-              board?.shipments.map((s) => (
+              demoShipments.map((s) => {
+                const story = storyForShipment(s.id);
+                const cargoSt = cargoStatusFor(s.id);
+                return (
                 <button key={s.id} className={s.id === selectedId ? 'on' : ''} onClick={() => select(s.id)}>
-                  <span className="id">{s.id}</span>
+                  <span className="id">{story?.driveLabel ?? s.id}</span>
                   <span className="nm">
-                    <b>{driverOf(s)}</b>
+                    <b>{driverHeadline(s)}</b>
                     <div className="sub">
-                      {s.cargo} · {s.terminal_id} → {s.warehouse_id}
+                      {s.cargo} · {routeHeadline(s)}
                       {s.priority === 'high' ? ' · priority' : ''}
                     </div>
                     <div className="sub" style={{ fontFamily: 'var(--mono)' }}>
+                      <span className={`chip ${cargoStatusChip(cargoSt)}`}>Cargo {cargoStatusLabel(cargoSt)}</span>{' '}
                       <span className={`chip ${STATUS[s.current.status][1]}`}>{STATUS[s.current.status][0]}</span>{' '}
                       {s.current.slack_min >= 0 ? `+${s.current.slack_min} min spare` : `−${Math.abs(s.current.slack_min)} min late`}
                     </div>
                   </span>
                 </button>
-              ))}
+                );
+              })}
             {view === 'prob' &&
-              ONROUTE.map((x) => (
-                <button key={x.id} className={x.id === probId ? 'on' : ''} onClick={() => setProbId(x.id)}>
-                  <span className="id">{x.id}</span>
+              onRouteTrucks.map((x) => (
+                <button key={x.id} className={x.id === t.id ? 'on' : ''} onClick={() => setProbId(x.id)}>
+                  <span className="id">{x.id === GEORGE_ONROUTE.id ? 'Drive 1' : x.id}</span>
                   <span className="nm">
                     <b>{x.drv}</b>
                     <div className="sub">{x.short}</div>
@@ -719,152 +906,80 @@ export default function DispatchApp() {
           {view === 'go' && row && (
             <section className="view on">
               <div className="ttl">
-                {driverOf(row)} → {whName(row.warehouse_id)}
+                {activeStory
+                  ? `${activeStory.driveLabel}: ${activeStory.driverName} · ${activeStory.originLabel} → ${activeStory.destinationLabel}`
+                  : `${driverOf(row)} → ${whName(row.warehouse_id)}`}
               </div>
               <div className="sub2">
-                {row.id} · {row.cargo} · window <b>{clock(row.current.appt_start_min)} to {clock(row.current.appt_end_min)}</b> · status{' '}
-                <b className={row.current.status === 'on_time' ? 'goodc' : 'badc'}>{STATUS[row.current.status][0].toLowerCase()}</b>
-                {row.current.needs_review && ' · depends on an unverified report'}
+                {row.cargo}{' '}
+                <span className={`chip ${cargoStatusChip(cargoStatusFor(row.id))}`}>
+                  Cargo {cargoStatusLabel(cargoStatusFor(row.id))}
+                </span>
+                {' · window '}
+                <b>
+                  {row.id === 'C-102'
+                    ? georgeWindowLabel
+                    : `${clock(row.current.appt_start_min)} to ${clock(row.current.appt_end_min)}`}
+                </b>
+                {' · on map: '}
+                <b>{chosenLabel}</b>
+                {activeJob?.chosenKind === 'impact' && chosenKind === 'impact' && activeStory && (
+                  <> · <span className="chip good">Dispatcher chose env & community</span></>
+                )}
               </div>
-              <Compare board={board!} compact />
-              {optError && (
-                <div className="alert bad">
-                  {optError}{' '}
-                  <button className="btn sm" onClick={() => selectedId && loadOptions(selectedId)}>Retry</button>
-                </div>
+              {selectedId && activeJob && (
+                <DemoRoutePanel
+                  shipmentId={selectedId}
+                  chosenKind={chosenKind}
+                  onChoose={setChosenKind}
+                />
               )}
-              {!opts && !optError && <div className="mute">Loading route options…</div>}
-              {opts && (
-                <>
-                  {opts.suggested_option_id && (
-                    <div className="alert ok">
-                      <b>Suggested:</b> {opts.rationale.replace(/^Suggested:\s*/, '')}
-                      <div className="src">Rule-based score from the dispatch priorities. You decide.</div>
-                    </div>
-                  )}
-                  {decision && (
-                    <div className="alert ok">
-                      <b>Decided:</b> {decision.option_title} ({decision.was_suggested ? 'suggested' : `override: ${decision.reason ?? ''}`})
-                      <textarea className="draft" readOnly value={decision.supervisor_update} aria-label="Drafted supervisor update" />
-                      <div className="acts">
-                        <button
-                          className="btn sm"
-                          onClick={() => {
-                            void navigator.clipboard?.writeText(decision.supervisor_update).then(() => {
-                              setCopied(true);
-                              setTimeout(() => setCopied(false), 2000);
-                            });
-                          }}
-                        >
-                          {copied ? 'Copied' : 'Copy update'}
-                        </button>
-                        <button className="btn sm" disabled={busy} onClick={() => run(() => deleteDecision(decision.id), 'Decision undone')}>Undo</button>
-                        <span className="mute small">The tool does not send anything.</span>
-                      </div>
-                    </div>
-                  )}
-                  {roleOpts.map(roleCard)}
-                  {others.length > 0 && (
-                    <>
-                      <h4>Other responses</h4>
-                      {others.map((o) => (
-                        <Acc
-                          key={o.id}
-                          open={openKey === o.id}
-                          sel={pickedId === o.id}
-                          onToggle={() => {
-                            if (o.feasible) setPickedId(o.id);
-                            setOpenKey(openKey === o.id ? null : o.id);
-                          }}
-                          head={
-                            <>
-                              <span className="left">
-                                <span className="at">{o.title}</span>
-                                <div style={{ marginTop: '.35rem' }}>
-                                  {o.suggested && <span className="chip good">Suggested</span>}{' '}
-                                  {!o.feasible && <span className="chip bad">Not possible</span>}{' '}
-                                  <span className={`chip ${STATUS[o.evaluation.status][1]}`}>{STATUS[o.evaluation.status][0]}</span>
-                                </div>
-                              </span>
-                              <span className={`big ${o.evaluation.slack_min < 0 ? 'late' : ''}`}>
-                                {o.evaluation.slack_min < 0 ? '−' : '+'}
-                                {Math.abs(o.evaluation.slack_min)}
-                                <small>{o.evaluation.slack_min < 0 ? 'min late' : 'min spare'}</small>
-                              </span>
-                            </>
-                          }
-                        >
-                          <Mx
-                            cells={[
-                              ['Arrive', clock(o.evaluation.eta_min).replace(' ', '')],
-                              ['Miles', o.evaluation.miles.toFixed(0)],
-                              ['CO₂', `${o.evaluation.co2_kg.toFixed(0)} kg`],
-                              ['Cost', `$${o.evaluation.cost_usd.toFixed(0)}`],
-                              ['Community', o.evaluation.community_score.toFixed(0)],
-                            ]}
-                          />
-                          <div className="more">
-                            <p>{o.description}</p>
-                            {!o.feasible && o.infeasible_reason && <p className="badc">{o.infeasible_reason}</p>}
-                            <ul>
-                              {o.burdens.map((b, i) => (
-                                <li key={i}>
-                                  {b.text.toLowerCase().startsWith(STAKE[b.stakeholder].toLowerCase()) ? b.text : <><b>{STAKE[b.stakeholder]}:</b> {b.text}</>}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                          <div className="acts">
-                            <button className="btn ask" onClick={() => setExplainId(o.id)}>Explain this option</button>
-                          </div>
-                        </Acc>
-                      ))}
-                    </>
-                  )}
-                  {reasonFor && (
-                    <form
-                      className="alert warn"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        const o = opts.options.find((x) => x.id === reasonFor);
-                        if (o) void decide(o, reason);
-                      }}
-                    >
-                      <label htmlFor="reason">
-                        <b>Why this instead of the suggestion?</b>
-                      </label>
-                      <div className="send" style={{ padding: '.5rem 0 0' }}>
-                        <input id="reason" autoFocus maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={!!reasonError} aria-describedby={reasonError ? 'reason-err' : undefined} />
-                        <button className="btn pri" type="submit" disabled={busy}>Confirm</button>
-                        <button className="btn" type="button" onClick={() => setReasonFor(null)}>Cancel</button>
-                      </div>
-                      {reasonError && (
-                        <div id="reason-err" className="badc small" role="alert">
-                          {reasonError}
-                        </div>
-                      )}
-                    </form>
-                  )}
-                  <div style={{ marginTop: '1.2rem', display: 'flex', gap: '.8rem' }}>
-                    <button className="btn pri lg" style={{ flex: 1 }} disabled={!pickedOpt || !pickedOpt.feasible || busy} onClick={() => pickedOpt && decide(pickedOpt)}>
-                      {busy ? 'Recording…' : pickedOpt ? `Dispatch ${driverOf(row)}: ${pickedOpt.title}` : 'Choose a route'}
-                    </button>
-                    <button className="btn lg" onClick={() => toast('Held at the yard. Nothing was changed or sent.')}>Hold</button>
-                  </div>
-                </>
-              )}
+              <div style={{ marginTop: '1.2rem', display: 'flex', gap: '.8rem' }}>
+                <button
+                  className="btn pri lg"
+                  style={{ flex: 1 }}
+                  onClick={() => {
+                    if (row.id === 'C-102') {
+                      setGeorgeDispatched(true);
+                      setProbId(GEORGE_ONROUTE.id);
+                    }
+                    toast(`Dispatch ${driverHeadline(row)} on ${chosenLabel.toLowerCase()}`);
+                    setView('map');
+                  }}
+                >
+                  Dispatch {driverHeadline(row)}
+                </button>
+                <button className="btn lg" onClick={() => toast('Held at the yard. Nothing was changed or sent.')}>
+                  Hold
+                </button>
+              </div>
             </section>
           )}
 
           {view === 'prob' && (
             <section className="view on">
-              <div className="scripted">Scripted example: trucks on the road are not computed by the backend.</div>
               <div className="ttl">
                 {t.drv}{' '}
                 <span className={`chip ${t.sit}`} style={{ fontSize: '.9rem', marginLeft: '.4rem' }}>{t.sitT}</span>
               </div>
               <div className="sub2">
-                {t.id} · {t.cargo}
+                {t.id === GEORGE_ONROUTE.id ? 'Drive 1' : t.id} · {t.cargo}
+                {t.id === GEORGE_ONROUTE.id && (
+                  <>
+                    {' · window '}
+                    <b>{georgeWindowLabel}</b>
+                    {georgeSubmittedKind && (
+                      <>
+                        {' · '}
+                        <b>
+                          {georgeSubmittedKind === 'impact'
+                            ? 'Env & community detour'
+                            : 'Fastest detour'}
+                        </b>
+                      </>
+                    )}
+                  </>
+                )}
                 {t.wants && (
                   <>
                     {' · '}
@@ -901,9 +1016,8 @@ export default function DispatchApp() {
                   <Acc
                     key={i}
                     open={probOpen === i}
-                    sel={probOpt === i}
+                    sel={probOpen === i}
                     onToggle={() => {
-                      setProbOpt(i);
                       setProbOpen(probOpen === i ? null : i);
                     }}
                     head={
@@ -934,27 +1048,17 @@ export default function DispatchApp() {
                           <li key={k}>{w}</li>
                         ))}
                       </ul>
-                      <div className="src">Goal: {OBJ[o.obj].toLowerCase()} · scripted example</div>
+                      <div className="src">Goal: {OBJ[o.obj].toLowerCase()}</div>
                     </div>
                     <div className="acts">
                       <button
                         className={`btn ${o.rec ? 'pri' : ''}`}
                         onClick={() => {
-                          toast(`Scripted: option ${i + 1} sent to ${t.drv}`);
+                          toast(`Plan sent to ${t.drv}`);
                           addDriverMsg({ kind: 'me', html: `Plan sent: ${esc(o.t)}`, time: '9:41 AM' });
-                          setSideTab('chat');
                         }}
                       >
                         Send to {t.drv}
-                      </button>
-                      <button
-                        className="btn ask"
-                        onClick={() => {
-                          setProbOpt(i);
-                          setSideTab('explain');
-                        }}
-                      >
-                        Explain this option
                       </button>
                     </div>
                   </Acc>
@@ -992,7 +1096,7 @@ export default function DispatchApp() {
                   })}
                 </div>
                 <div>
-                  <h4>Roads · report and set your own status</h4>
+                  <h4>Roads · set your own status</h4>
                   {presets
                     .filter((pr) => ['slowdown', 'closure', 'hazard'].includes(pr.disruption.kind))
                     .map((pr) => {
@@ -1012,7 +1116,7 @@ export default function DispatchApp() {
                               </div>
                             )}
                           </div>
-                          {d ? (
+                          {d && (
                             <div className="seg3" role="group" aria-label={`Your call on ${pr.label}`}>
                               {(['unverified', 'confirmed', 'dismissed'] as const).map((v) => (
                                 <button key={v} className={d.verification === v ? 'on' : ''} aria-pressed={d.verification === v} onClick={() => verdict(d.id, v)}>
@@ -1020,10 +1124,6 @@ export default function DispatchApp() {
                                 </button>
                               ))}
                             </div>
-                          ) : (
-                            <button className="btn sm" onClick={() => run(() => createDisruption(pr.disruption), `${pr.label} reported (unverified)`)}>
-                              Report
-                            </button>
                           )}
                         </div>
                       );
@@ -1036,64 +1136,20 @@ export default function DispatchApp() {
       </div>
 
       <aside id="side">
-        {view === 'go' && (
-          <div className="sidepane on">
-            <div className="sidehd">
-              <span className="t">Explain this option</span>
-            </div>
-            <div className="msgs">
-              {!explainOpt ? (
-                <div className="m sys">Press “Explain this option” on a route card to see why it scores as it does.</div>
-              ) : (
-                <div className="m ai">
-                  <b>{explainOpt.title}</b>
-                  <ul style={{ margin: '.4rem 0', paddingLeft: '1.1rem' }}>
-                    {explain(explainOpt, opts?.rationale ?? '').map((line, i) => (
-                      <li key={i}>{line}</li>
-                    ))}
-                  </ul>
-                  <div className="srcline">{SCRIPTED_LINE}</div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
         {view === 'prob' && (
           <div className="sidepane on">
             <div className="sidehd">
-              <button className={sideTab === 'chat' ? 'on' : ''} onClick={() => setSideTab('chat')}>Driver chat</button>
-              <button className={sideTab === 'explain' ? 'on' : ''} onClick={() => setSideTab('explain')}>Explain this option</button>
+              <span className="t">Driver chat</span>
             </div>
-            {sideTab === 'chat' ? (
-              <div className="chat on">
-                <Messages msgs={trMsgs} />
-                <div className="quick">
-                  {p.quick.map((q) => (
-                    <button key={q} onClick={() => addDriverMsg({ kind: 'me', html: esc(q), time: '9:41 AM' })}>{q}</button>
-                  ))}
-                </div>
-                <ChatInput onSend={(x) => addDriverMsg({ kind: 'me', html: esc(x), time: '9:41 AM' })} />
+            <div className="chat on">
+              <Messages msgs={trMsgs} />
+              <div className="quick">
+                {p.quick.map((q) => (
+                  <button key={q} onClick={() => addDriverMsg({ kind: 'me', html: esc(q), time: '9:41 AM' })}>{q}</button>
+                ))}
               </div>
-            ) : (
-              <div className="chat on">
-                <div className="msgs">
-                  {probOpt == null || !p.opts[probOpt] ? (
-                    <div className="m sys">Press “Explain this option” on an option.</div>
-                  ) : (
-                    <div className="m ai">
-                      <b>{p.opts[probOpt].t}</b>
-                      <ul style={{ margin: '.4rem 0', paddingLeft: '1.1rem' }}>
-                        <li>{p.opts[probOpt].s}</li>
-                        {p.opts[probOpt].why.map((w, k) => (
-                          <li key={k}>{w}</li>
-                        ))}
-                      </ul>
-                      <div className="srcline">{SCRIPTED_LINE} Scripted example.</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+              <ChatInput onSend={(x) => addDriverMsg({ kind: 'me', html: esc(x), time: '9:41 AM' })} />
+            </div>
           </div>
         )}
       </aside>

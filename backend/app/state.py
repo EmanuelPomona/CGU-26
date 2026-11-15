@@ -54,6 +54,13 @@ class Store:
 
     def reset(self) -> None:
         with self.lock:
+            # ADR-002: rebuild fixed seed data from disk on every reset.
+            self.network = _load("network")
+            self.shipments = _load("shipments")
+            self.presets = _load("presets")
+            self.world = World(self.network, self.shipments, _load("routes")["routes"])
+            self.routes = self.world.routes
+            self.routes_by_pair = self.world.routes_by_pair
             self.settings = {"clock_min": DEFAULT_CLOCK_MIN, "weights": dict(DEFAULT_WEIGHTS)}
             self.disruptions: list[dict] = []
             self.plans: dict = {}  # shipment_id -> Plan in force when a decision exists

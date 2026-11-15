@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from app.studio.graph import (
     RoadGraph,
     StudioObstacle,
+    edge_intersects_obstacle,
     edge_obstacle_fraction,
     hav_m,
     path_geometry,
@@ -36,26 +37,28 @@ class PathResult:
 
 
 def _blocked(g: RoadGraph, e, obstacles: list[StudioObstacle], hard_only: bool) -> bool:
+    """Road closures hard-block any intersecting edge for every solver (demo-critical)."""
     for o in obstacles:
+        if o.type == "road_closure" and edge_intersects_obstacle(g, e, o):
+            return True
         frac = edge_obstacle_fraction(g, e, o)
         if hard_only:
-            if o.type in ("road_closure", "wildfire", "flood") and o.confidence >= 0.8 and frac >= 0.999:
+            if o.type in ("wildfire", "flood") and o.confidence >= 0.8 and frac >= 0.5:
                 return True
-        else:
-            if o.type == "road_closure" and frac > 0.5:
-                return True
+        elif o.type in ("wildfire", "flood") and frac > 0.5:
+            return True
     return False
 
 
 def _edge_penalty(g: RoadGraph, e, obstacles: list[StudioObstacle], scale: float = 1.0) -> float:
     pen = 0.0
     for o in obstacles:
+        if o.type == "road_closure" and edge_intersects_obstacle(g, e, o):
+            return 1e12  # impassable
         frac = edge_obstacle_fraction(g, e, o)
         if frac <= 0:
             continue
         mult = PENALTY.get(o.type, 1.0) * scale
-        if o.type == "road_closure" and frac > 0.5:
-            return 1e12  # impassable for avoid solver
         pen += mult * e.travel_s * frac
     return pen
 

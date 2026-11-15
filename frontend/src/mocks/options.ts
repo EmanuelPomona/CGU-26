@@ -109,14 +109,14 @@ export function buildOptions(state: MockState, shipmentId: string): OptionsRespo
         id: 'spare:T8',
         kind: 'spare_truck',
         title: 'Send spare truck T8 via I-10',
-        description: 'Driver 08 takes the container on the I-10 detour; T3 is released.',
+        description: 'Diego takes the container on the I-10 detour; T3 is released.',
         evaluation: evaluation({ seed, truck: 'T8', route: i10.id, eta: 646, prob: 0.86, community: 83, local: 1.6, near: 1, extraIdle: 25 }),
         route: i10,
         overall: 0,
         scores: { reliability: 86, cost: 58, emissions: 66, community: 85, driver: 20 },
-        burdens: [{ stakeholder: 'driver', text: 'Driver 08 would end the shift over the hours limit.' }],
+        burdens: [{ stakeholder: 'driver', text: 'Diego would end the shift over the hours limit.' }],
         notes: [],
-        infeasible_reason: 'Driver 08 has 9.0 h left; this run needs about 9.4 h.',
+        infeasible_reason: 'Diego has 9.0 h left; this run needs about 9.4 h.',
       },
     );
   }

@@ -290,8 +290,8 @@
     },
     {
       "id": "TRK_T1",
-      "lat": 33.77,
-      "lng": -118.2,
+      "lat": 33.76,
+      "lng": -118.21,
       "kind": "truck"
     },
     {
@@ -341,6 +341,12 @@
       "lat": 33.83,
       "lng": -118.22,
       "kind": "truck"
+    },
+    {
+      "id": "CLM",
+      "lat": 34.0967,
+      "lng": -117.7198,
+      "kind": "warehouse"
     }
   ],
   "edges": [
@@ -1702,6 +1708,38 @@
       "v": "TRK_T9",
       "length_m": 0.0,
       "travel_s": 0.0,
+      "hwy": false
+    },
+    {
+      "id": "E171",
+      "u": "J_POM",
+      "v": "CLM",
+      "length_m": 5500.0,
+      "travel_s": 420.0,
+      "hwy": false
+    },
+    {
+      "id": "E172",
+      "u": "CLM",
+      "v": "J_POM",
+      "length_m": 5500.0,
+      "travel_s": 420.0,
+      "hwy": false
+    },
+    {
+      "id": "E173",
+      "u": "CLM",
+      "v": "ONT",
+      "length_m": 14000.0,
+      "travel_s": 1100.0,
+      "hwy": false
+    },
+    {
+      "id": "E174",
+      "u": "ONT",
+      "v": "CLM",
+      "length_m": 14000.0,
+      "travel_s": 1100.0,
       "hwy": false
     }
   ]

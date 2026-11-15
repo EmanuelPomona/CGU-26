@@ -1,138 +1,122 @@
-import type { StudioAlternative, StudioSession } from '../api/types';
-
-const SLOT_ORDER = ['fastest', 'direct', 'avoid'] as const;
-
-export function sortStudioAlts(alts: StudioAlternative[]): StudioAlternative[] {
-  const rank = Object.fromEntries(SLOT_ORDER.map((s, i) => [s, i]));
-  return [...alts].sort((a, b) => (rank[a.slot] ?? 9) - (rank[b.slot] ?? 9));
-}
+import { DemoRoutePanel } from './DemoRoutePanel';
+import type { RouteKind } from './demoRoutes';
+import type { StoryCase } from './storyCases';
+import type { StudioSession } from '../api/types';
 
 interface Props {
   session: StudioSession | null;
-  pickingDest: boolean;
-  selectedTruckId: string | null;
-  focusAltId: string | null;
   busy: boolean;
   error: string | null;
-  onFocusAlt: (id: string | null) => void;
+  story?: StoryCase | null;
+  chosenKind: RouteKind;
+  reroutePending?: boolean;
+  canSubmitReroute?: boolean;
+  rerouteSubmitted?: boolean;
+  onChoose: (kind: RouteKind) => void;
+  onSubmitReroute?: () => void;
   onClear: () => void;
+  onRemoveObstacle: (obstacleId: string) => void;
+  shipmentId: string | null;
 }
 
 export function RouteStudio({
   session,
-  pickingDest,
-  selectedTruckId,
-  focusAltId,
   busy,
   error,
-  onFocusAlt,
+  story,
+  chosenKind,
+  reroutePending,
+  canSubmitReroute,
+  rerouteSubmitted,
+  onChoose,
+  onSubmitReroute,
   onClear,
+  onRemoveObstacle,
+  shipmentId,
 }: Props) {
-  const alts = session ? sortStudioAlts(session.alternatives) : [];
+  const hasObstacles = Boolean(session && session.obstacles.length > 0);
+  const who = story?.driverName ?? session?.truck_id ?? 'truck';
+  const od = story
+    ? `${story.originLabel} → ${story.destinationLabel}`
+    : 'origin → destination';
+  const chosenLabel =
+    chosenKind === 'impact' ? 'Environment & community minimized' : 'Fastest route';
 
   return (
-    <div className="studio-panel" aria-label="Route studio">
+    <div className="studio-panel" aria-label="Reroute options">
       <div className="studio-head">
-        <h3>Route studio</h3>
-        {(session || selectedTruckId) && (
+        <h3>{story ? `${story.driveLabel} on map` : 'On map'}</h3>
+        {session && (
           <button type="button" className="btn ghost" onClick={onClear}>
-            Clear
+            Change path
           </button>
         )}
       </div>
       {error && <p className="studio-err">{error}</p>}
-      {busy && <p className="mute small">Computing routes…</p>}
-      {!session && !selectedTruckId && (
-        <p className="mute">Click a truck on the map, then click a destination.</p>
-      )}
-      {selectedTruckId && !session && (
-        <p className="mute">
-          Truck <b>{selectedTruckId}</b> selected.
-          {pickingDest ? ' Click the map for a destination.' : ''}
-        </p>
-      )}
+      {busy && <p className="mute small">Updating routes…</p>}
+      {!session && <p className="mute">Select a job in To dispatch to set the path on this board.</p>}
       {session && (
         <>
           <p className="small mute">
-            {session.truck_id} → destination · {session.obstacles.length} obstacle
-            {session.obstacles.length === 1 ? '' : 's'}
+            {who} · {od}
           </p>
-          <div className="studio-alts">
-            {alts.map((a) => (
-              <AltCard
-                key={a.id}
-                alt={a}
-                focused={focusAltId === a.id}
-                onFocus={() => onFocusAlt(focusAltId === a.id ? null : a.id)}
+          <p className="small">
+            {hasObstacles && reroutePending ? (
+              <>Path blocked — preview a reroute, then Submit</>
+            ) : rerouteSubmitted ? (
+              <>
+                Submitted: <b>{chosenLabel}</b>
+              </>
+            ) : (
+              <>
+                Showing: <b>{chosenLabel}</b>
+              </>
+            )}
+          </p>
+          {hasObstacles && (
+            <ul className="studio-obs-list" aria-label="Active obstacles">
+              {session.obstacles.map((o) => (
+                <li key={o.id} className="studio-obs-row">
+                  <span>{o.label}</span>
+                  <button
+                    type="button"
+                    className="btn ghost studio-obs-remove"
+                    disabled={busy}
+                    onClick={() => onRemoveObstacle(o.id)}
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {hasObstacles && shipmentId && (
+            <>
+              <p className="mute small" style={{ marginTop: '.6rem' }}>
+                {reroutePending
+                  ? 'Road blocked — click a card to preview, then Submit to lock it in.'
+                  : rerouteSubmitted
+                    ? 'Reroute submitted. George will use this path on On route.'
+                    : 'Preview another option, or Submit to lock this one in.'}
+              </p>
+              <DemoRoutePanel
+                shipmentId={shipmentId}
+                chosenKind={reroutePending ? null : chosenKind}
+                onChoose={onChoose}
+                onSubmit={onSubmitReroute}
+                canSubmit={canSubmitReroute}
+                submitted={rerouteSubmitted}
+                reroute
               />
-            ))}
-          </div>
-          <p className="small mute studio-legend">
-            Map: solid = Fastest · dash = Direct · dotted = Avoid hazards
-          </p>
+            </>
+          )}
+          {!hasObstacles && (
+            <p className="mute small">
+              Drop a road closure on the path to see two reroute options (fastest arrival vs environment & community).
+            </p>
+          )}
         </>
       )}
     </div>
-  );
-}
-
-function AltCard({
-  alt,
-  focused,
-  onFocus,
-}: {
-  alt: StudioAlternative;
-  focused: boolean;
-  onFocus: () => void;
-}) {
-  const m = alt.metrics;
-  return (
-    <article className={`studio-alt ${focused ? 'focus' : ''} ${alt.feasible ? '' : 'infeas'}`}>
-      <header>
-        <strong>{alt.label}</strong>
-        <span className="chip soft">{alt.algorithm}</span>
-      </header>
-      <p className="small">{alt.summary}</p>
-      {!alt.feasible && alt.infeasible_reason && (
-        <p className="small studio-err">{alt.infeasible_reason}</p>
-      )}
-      {alt.feasible && (
-        <div className="mx studio-mx">
-          <div>
-            <span>ETA</span>
-            <b>{Math.round(m.eta_min)} min</b>
-          </div>
-          <div>
-            <span>Miles</span>
-            <b>{m.distance_km.toFixed(1)}</b>
-          </div>
-          <div>
-            <span>CO₂</span>
-            <b>{m.co2_kg.toFixed(0)} kg</b>
-          </div>
-          <div>
-            <span>Exposure</span>
-            <b>{(m.obstacle_exposure * 100).toFixed(0)}%</b>
-          </div>
-        </div>
-      )}
-      {alt.pros.length > 0 && (
-        <ul className="studio-pros">
-          {alt.pros.map((t, i) => (
-            <li key={`p${i}`}>{t}</li>
-          ))}
-        </ul>
-      )}
-      {alt.cons.length > 0 && (
-        <ul className="studio-cons">
-          {alt.cons.map((t, i) => (
-            <li key={`c${i}`}>{t}</li>
-          ))}
-        </ul>
-      )}
-      <button type="button" className="btn ask" onClick={onFocus} disabled={!alt.feasible}>
-        {focused ? 'Hide highlight' : 'Show on map'}
-      </button>
-    </article>
   );
 }

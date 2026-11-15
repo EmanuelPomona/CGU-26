@@ -50,7 +50,7 @@ def method_payload() -> dict:
              "used_for": "Schools, hospitals and residential areas near routes for the community score.",
              "limits": "30 invented locations, not real facilities."},
             {"name": "Shipments, trucks, warehouses and appointments", "kind": "simulated",
-             "used_for": "The dispatcher's day: 7 container moves, 9 trucks, 6 warehouses, 2 terminals.",
+             "used_for": "The dispatcher's day: 7 container moves, 9 trucks, 7 warehouses, 2 terminals.",
              "limits": "Fictional operations; drivers are labels, not people."},
             {"name": "Disruption presets", "kind": "simulated",
              "used_for": "One-click what-if conditions for the demo.",

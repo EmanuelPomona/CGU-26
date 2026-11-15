@@ -13,12 +13,12 @@
  {
   "id": "C-102",
   "terminal_id": "POLB",
-  "warehouse_id": "COM",
+  "warehouse_id": "CLM",
   "truck_id": "T1",
   "ready_min": 480,
-  "appt_start_min": 550,
-  "appt_end_min": 595,
-  "cargo": "Perishable (cold chain)",
+  "appt_start_min": 600,
+  "appt_end_min": 690,
+  "cargo": "Import containers",
   "priority": "high"
  },
  {

@@ -16,10 +16,6 @@ body{font:400 1rem/1.45 var(--sans);color:var(--ink);background:var(--bg);overfl
 .nav .n{font:500 .8rem var(--mono);margin-left:.4rem;opacity:.8}
 .nav .n.alert{background:var(--bad);color:#fff;border-radius:99px;padding:0 .45rem;opacity:1}
 .top .clock{margin-left:auto;font:500 1rem var(--mono)}
-.mode-toggle{display:inline-flex;border:1px solid #666;border-radius:4px;overflow:hidden;margin-left:.5rem}
-.mode-toggle button{background:transparent;border:0;color:#aaa;font:500 .85rem var(--sans);padding:.35rem .75rem;cursor:pointer}
-.mode-toggle button.on{background:#fff;color:var(--ink)}
-.mode-toggle button:hover:not(.on){color:#fff}
 /* the one map: full screen at home, small box in work views */
 #mapwrap{position:fixed;z-index:5;overflow:hidden;background:#f1f1f1;transition:top .3s,left .3s,right .3s,bottom .3s,border-radius .3s}
 .dapp.home #mapwrap{top:var(--hh);left:0;right:0;bottom:0}
@@ -167,10 +163,13 @@ h4:first-child{margin-top:0}
 .tk.warn{border-color:var(--bad)}
 .tk.bad{background:var(--bad);border-color:var(--bad);color:#fff}
 .tk.hollow{border:2px dashed #555}
-.tk.tk-img{width:2.25rem;height:2.25rem;padding:.2rem;border-radius:8px;background:#fff}
+.tk.tk-img{width:3rem;height:1.9rem;padding:.15rem .2rem;border-radius:6px;background:#fff;border-width:2px}
 .tk.tk-img img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
-.tk.tk-img.bad{background:#fff}
-.tk.tk-img.bad img{filter:none}
+.tk.tk-img.bad{background:#fff;border-color:var(--bad)}
+.tk.tk-img.warn{border-color:#c45c26}
+.tk.tk-img.hollow{border-style:dashed}
+.leg-tk{width:2.4rem;height:1.5rem;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--ink);border-radius:4px;padding:.1rem .15rem;background:#fff}
+.leg-tk img{width:100%;height:100%;object-fit:contain;display:block}
 .wh-img{width:2.1rem;height:2.1rem;display:flex;align-items:center;justify-content:center;background:#fff;border:2px solid var(--ink);border-radius:6px;box-shadow:0 0 0 1px #fff;padding:.15rem}
 .wh-img img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
 .leg-tk,.leg-wh{display:inline-flex;width:1.35rem;height:1.35rem;align-items:center;justify-content:center;background:#fff;border:2px solid var(--good);border-radius:4px;padding:1px;vertical-align:middle;margin-right:.15rem}
@@ -238,6 +237,13 @@ textarea.draft{width:100%;min-height:9rem;margin-top:.6rem;font:400 .9rem/1.4 va
 .obs-img.confirmed{border-color:var(--bad)}
 .obs-img.dismissed{opacity:.45;border-color:#9a9a9a}
 /* Route studio */
+/* Slim top-center chip so it does not cover the left obstacle palette. */
+.story-banner{position:absolute;z-index:920;left:50%;top:.75rem;transform:translateX(-50%);max-width:min(36rem,calc(100vw - 16rem));background:#fff;border:1px solid var(--ink);border-radius:6px;box-shadow:0 4px 14px #0002;padding:.4rem .85rem;display:flex;flex-wrap:wrap;align-items:baseline;justify-content:center;gap:.35rem .55rem;pointer-events:none}
+.story-banner .story-case{font:500 .7rem var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--mute)}
+.story-banner strong{font:600 1rem var(--sans)}
+.story-banner .story-sep{color:var(--mute)}
+.story-banner .story-route{font:500 .9rem var(--sans);white-space:nowrap}
+.dapp.work .story-banner{display:none}
 .studio-panel{position:absolute;z-index:910;right:1rem;bottom:1.25rem;width:min(22rem,92vw);max-height:min(70vh,34rem);overflow:auto;background:#fff;border:1px solid var(--ink);border-radius:8px;box-shadow:0 8px 28px #0003;padding:.85rem 1rem 1rem}
 .studio-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.5rem}
 .studio-head h3{margin:0;font:600 1rem var(--sans)}
@@ -253,4 +259,35 @@ textarea.draft{width:100%;min-height:9rem;margin-top:.6rem;font:400 .9rem/1.4 va
 .studio-cons li{color:var(--mute)}
 .studio-alt .btn{margin-top:.55rem}
 .studio-legend{margin:.65rem 0 0}
+.studio-obs-list{list-style:none;margin:.45rem 0 .2rem;padding:0;display:flex;flex-direction:column;gap:.35rem}
+.studio-obs-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;border:1px solid var(--line);border-radius:4px;padding:.35rem .55rem;background:#fff;font-size:.9rem}
+.studio-obs-remove{color:var(--bad);border-color:#e0b4b2;padding:.2rem .55rem;font-size:.8rem}
+.studio-obs-remove:hover{background:#fdf2f1}
+/* Demo two-route / three-score cards */
+.demo-routes{margin-top:.75rem}
+.demo-routes-lead{margin:0 0 .55rem}
+.demo-route-list{display:flex;flex-direction:column;gap:.75rem}
+.demo-route-card{border:1px solid var(--line);border-radius:8px;padding:.75rem .85rem;background:#fff;cursor:pointer;transition:border-color .12s ease,box-shadow .12s ease}
+.demo-route-card:hover{border-color:var(--ink)}
+.demo-route-card:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.demo-route-card.selected{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.demo-route-head{display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start}
+.demo-route-head strong{margin-right:.45rem}
+.demo-route-head p{margin:.25rem 0 0}
+.demo-route-meta{display:flex;flex-direction:column;align-items:flex-end;gap:.15rem;font:500 .85rem var(--mono);color:var(--mute);white-space:nowrap}
+.demo-score-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.4rem;margin:.7rem 0 .35rem}
+.demo-score{border:1px solid var(--line);background:var(--soft);border-radius:6px;padding:.45rem .4rem;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:.1rem;min-height:3.6rem}
+.demo-score:hover{background:#fff}
+.demo-score.on{border-color:var(--ink);background:#fff}
+.demo-score-label{font:500 .68rem var(--mono);text-transform:uppercase;letter-spacing:.04em;color:var(--mute);line-height:1.2}
+.demo-score b{font:600 1.15rem var(--sans);line-height:1}
+.demo-score-hint{font:400 .7rem var(--mono);color:var(--mute)}
+.demo-score-detail{margin:.45rem 0 .35rem;padding:.55rem .65rem;background:var(--soft);border-radius:6px;border:1px solid var(--line)}
+.demo-score-detail p{margin:0 0 .35rem;font-size:.9rem}
+.demo-score-detail ul{margin:0;padding-left:1.1rem;font-size:.88rem}
+.demo-score-detail li{margin:.2rem 0}
+.studio-panel .demo-routes{margin-top:.35rem}
+.studio-panel .demo-route-card{padding:.65rem .7rem}
+.studio-panel .demo-score{min-height:3.2rem;padding:.35rem .3rem}
+.studio-panel .demo-score b{font-size:1.05rem}
 .dapp.studio .legend .lb h5.studio-leg{margin-top:.7rem}

@@ -5,11 +5,11 @@ export function allowShipmentSelect(placeType: ObstacleType | null): boolean {
   return placeType === null;
 }
 
-/** Palette only where shipment routes are drawn (Map and To dispatch), or in Route studio with a session. */
+/** Palette on Map / To dispatch once a dispatch path (studio session) is active. */
 export function showObstaclePalette(
   view: 'map' | 'go' | 'prob' | 'net',
-  opts?: { studioMode?: boolean; hasStudioSession?: boolean },
+  opts?: { hasActivePath?: boolean },
 ): boolean {
-  if (opts?.studioMode) return Boolean(opts.hasStudioSession);
-  return view === 'map' || view === 'go';
+  if (view !== 'map' && view !== 'go') return false;
+  return Boolean(opts?.hasActivePath);
 }

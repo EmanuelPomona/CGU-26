@@ -42,6 +42,15 @@
    "booked": 18
   },
   {
+   "id": "CLM",
+   "name": "Claremont DC",
+   "lat": 34.0967,
+   "lng": -117.7198,
+   "docks": 10,
+   "capacity": 28,
+   "booked": 16
+  },
+  {
    "id": "ONT",
    "name": "Ontario Fulfillment",
    "lat": 34.03,
@@ -72,15 +81,15 @@
  "trucks": [
   {
    "id": "T1",
-   "driver_label": "Driver 01",
-   "lat": 33.77,
-   "lng": -118.2,
+   "driver_label": "George",
+   "lat": 33.76,
+   "lng": -118.21,
    "hours_available": 9.5,
    "spare": false
   },
   {
    "id": "T2",
-   "driver_label": "Driver 02",
+   "driver_label": "Priya",
    "lat": 33.75,
    "lng": -118.29,
    "hours_available": 8.0,
@@ -88,7 +97,7 @@
   },
   {
    "id": "T3",
-   "driver_label": "Driver 03",
+   "driver_label": "Elena",
    "lat": 33.79,
    "lng": -118.28,
    "hours_available": 10.0,
@@ -96,7 +105,7 @@
   },
   {
    "id": "T4",
-   "driver_label": "Driver 04",
+   "driver_label": "Jamal",
    "lat": 33.765,
    "lng": -118.205,
    "hours_available": 7.5,
@@ -104,7 +113,7 @@
   },
   {
    "id": "T5",
-   "driver_label": "Driver 05",
+   "driver_label": "Sofia",
    "lat": 33.745,
    "lng": -118.265,
    "hours_available": 9.0,
@@ -112,7 +121,7 @@
   },
   {
    "id": "T6",
-   "driver_label": "Driver 06",
+   "driver_label": "Kenji",
    "lat": 33.76,
    "lng": -118.21,
    "hours_available": 8.5,
@@ -120,7 +129,7 @@
   },
   {
    "id": "T7",
-   "driver_label": "Driver 07",
+   "driver_label": "Aisha",
    "lat": 33.775,
    "lng": -118.225,
    "hours_available": 10.5,
@@ -128,7 +137,7 @@
   },
   {
    "id": "T8",
-   "driver_label": "Driver 08",
+   "driver_label": "Diego",
    "lat": 33.78,
    "lng": -118.27,
    "hours_available": 9.0,
@@ -136,7 +145,7 @@
   },
   {
    "id": "T9",
-   "driver_label": "Driver 09",
+   "driver_label": "Nora",
    "lat": 33.83,
    "lng": -118.22,
    "hours_available": 9.5,

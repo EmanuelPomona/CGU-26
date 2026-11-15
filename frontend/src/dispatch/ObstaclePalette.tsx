@@ -45,7 +45,10 @@ export function ObstaclePalette(props: {
           );
         })}
       </div>
-      {selected && <div className="obstacle-palette-hint">Click a route on the map to place · Esc to cancel</div>}
+      {!selected && !disabled && (
+        <div className="obstacle-palette-hint">Drag onto the selected path — drops snap to the track</div>
+      )}
+      {selected && <div className="obstacle-palette-hint">Click the path to place · snaps to the track · Esc to cancel</div>}
     </div>
   );
 }

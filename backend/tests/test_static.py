@@ -16,12 +16,15 @@ def test_network_matches_contract_and_seed(client):
     n = r.json()
     assert_matches("Network", n)
     assert [t["id"] for t in n["terminals"]] == ["POLA", "POLB"]
-    assert [w["id"] for w in n["warehouses"]] == ["VER", "COM", "SFS", "ONT", "FON", "IRV"]
+    assert [w["id"] for w in n["warehouses"]] == ["VER", "COM", "SFS", "CLM", "ONT", "FON", "IRV"]
     assert [t["id"] for t in n["trucks"]] == [f"T{i}" for i in range(1, 10)]
     assert [t["id"] for t in n["trucks"] if t["spare"]] == ["T8", "T9"]
+    assert next(t for t in n["trucks"] if t["id"] == "T1")["driver_label"] == "George"
     assert [p["id"] for p in n["sensitive_places"]] == [f"SP-{i:02d}" for i in range(1, 31)]
     ont = next(w for w in n["warehouses"] if w["id"] == "ONT")
     assert (ont["docks"], ont["capacity"], ont["booked"]) == (20, 60, 44)
+    clm = next(w for w in n["warehouses"] if w["id"] == "CLM")
+    assert clm["name"] == "Claremont DC"
 
 
 def test_presets_are_the_seven_from_the_contract(client):

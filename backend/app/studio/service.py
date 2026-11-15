@@ -11,7 +11,7 @@ from app.studio.tradeoffs import solve_three
 from app.state import store
 
 OBSTACLE_DEFAULTS = {
-    "road_closure": {"radius_km": 2.0, "confidence": 0.8, "label": "Road closure"},
+    "road_closure": {"radius_km": 3.0, "confidence": 0.9, "label": "Road closure"},
     "wildfire": {"radius_km": 5.0, "confidence": 0.6, "label": "Wildfire"},
     "flood": {"radius_km": 3.0, "confidence": 0.5, "label": "Flood"},
     "traffic": {"radius_km": 4.0, "confidence": 0.7, "label": "Traffic slowdown"},
@@ -99,17 +99,47 @@ def get_session(sid: str) -> dict[str, Any]:
     return _public(s)
 
 
+def _snap_obstacle_to_session_path(session: dict[str, Any], lat: float, lng: float) -> tuple[float, float] | None:
+    """Magnet-snap onto the active session path(s), then the road graph."""
+    from app.studio.graph import nearest_polyline_point
+
+    candidates: list[list[list[float]]] = []
+    for key in ("baseline",):
+        alt = session.get(key)
+        if alt and alt.get("geometry"):
+            candidates.append(alt["geometry"])
+    for alt in session.get("alternatives") or []:
+        if alt.get("feasible") and alt.get("geometry"):
+            candidates.append(alt["geometry"])
+
+    best: tuple[float, float] | None = None
+    best_d = float("inf")
+    for geom in candidates:
+        hit = nearest_polyline_point(lat, lng, geom, max_km=80.0)
+        if hit and hit[1] < best_d:
+            best_d = hit[1]
+            best = hit[0]
+    if best is not None:
+        return best
+
+    g = load_graph()
+    snap = nearest_edge_point(g, lat, lng, max_km=25)
+    if snap is None:
+        return None
+    _, (slat, slng), _ = snap
+    return (slat, slng)
+
+
 def add_obstacle(sid: str, otype: str, lat: float, lng: float) -> dict[str, Any]:
     s = sessions.get(sid)
     if not s:
         raise not_found(f"Unknown studio session {sid!r}.")
     if otype not in OBSTACLE_DEFAULTS:
         raise validation(f"Unknown obstacle type {otype!r}.", "type")
-    g = load_graph()
-    snap = nearest_edge_point(g, lat, lng, max_km=2)
-    if snap is None:
+    snapped = _snap_obstacle_to_session_path(s, lat, lng)
+    if snapped is None:
         raise validation("Drop near the route or a road.", "lat")
-    _, (slat, slng), _ = snap
+    slat, slng = snapped
     d = OBSTACLE_DEFAULTS[otype]
     oid = f"SO-{len(s['obstacles']) + 1}"
     s["obstacles"].append(

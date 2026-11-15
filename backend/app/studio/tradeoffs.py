@@ -120,29 +120,22 @@ def build_alternative(
 def solve_three(
     g: RoadGraph, src: str, dst: str, obstacles: list[StudioObstacle]
 ) -> list[dict]:
+    """Always return exactly three alternatives (Fastest / Direct / Avoid).
+
+    When obstacles exist, escalate Avoid's penalty until the path is distinct from
+    Fastest when the graph allows it — but never drop Avoid for diversity alone.
+    """
     fastest = dijkstra_time(g, src, dst, obstacles)
     direct = astar_distance(g, src, dst, obstacles)
     avoid = dijkstra_avoid(g, src, dst, obstacles, penalty_scale=1.0)
 
-    if (
-        fastest.feasible
-        and avoid.feasible
-        and geometry_jaccard(fastest.geometry, avoid.geometry) > 0.92
-    ):
-        avoid2 = dijkstra_avoid(g, src, dst, obstacles, penalty_scale=1.5)
-        if avoid2.feasible and geometry_jaccard(fastest.geometry, avoid2.geometry) <= 0.92:
-            avoid = avoid2
-        else:
-            avoid = PathResult(
-                node_ids=[],
-                edge_ids=[],
-                travel_s=0.0,
-                length_m=0.0,
-                geometry=[],
-                feasible=False,
-                algorithm="dijkstra_avoid",
-                reason="no_distinct_avoidance_path",
-            )
+    if fastest.feasible and avoid.feasible and obstacles:
+        for scale in (1.5, 2.5, 4.0, 7.0):
+            if geometry_jaccard(fastest.geometry, avoid.geometry) <= 0.92:
+                break
+            candidate = dijkstra_avoid(g, src, dst, obstacles, penalty_scale=scale)
+            if candidate.feasible:
+                avoid = candidate
 
     baseline = fastest
     alts = [
@@ -150,4 +143,5 @@ def solve_three(
         build_alternative("direct", direct, obstacles, baseline),
         build_alternative("avoid", avoid, obstacles, baseline),
     ]
+    assert len(alts) == 3
     return alts

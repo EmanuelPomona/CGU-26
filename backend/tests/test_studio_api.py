@@ -37,6 +37,28 @@ def test_add_closure_recomputes(client):
     assert all(a["pros"] and a["cons"] for a in body["alternatives"])
 
 
+def test_road_closure_snaps_onto_session_path(client):
+    """Near-miss drops magnetize onto the active path (George-style OD)."""
+    s = client.post(
+        "/api/studio/session",
+        json={"truck_id": "T1", "destination": {"lat": 34.0967, "lng": -117.7198}},
+    ).json()
+    assert s.get("baseline", {}).get("geometry"), s
+    mid = s["baseline"]["geometry"][len(s["baseline"]["geometry"]) // 2]
+    # Offset ~1–2 km off the polyline; still must snap onto the path.
+    r = client.post(
+        f"/api/studio/session/{s['id']}/obstacles",
+        json={"type": "road_closure", "lat": mid[0] + 0.012, "lng": mid[1] - 0.01},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert len(body["obstacles"]) == 1
+    obs = body["obstacles"][0]
+    assert abs(obs["lat"] - mid[0]) < 0.05
+    assert abs(obs["lng"] - mid[1]) < 0.05
+    assert len(body["alternatives"]) == 3
+
+
 def test_destination_in_ocean_rejected(client):
     r = client.post(
         "/api/studio/session",

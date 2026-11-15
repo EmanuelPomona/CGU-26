@@ -46,13 +46,32 @@ export interface RouteTruck {
   wants?: string;
   short: string;
   cargo: string;
+  /** When set (e.g. George after a submitted reroute), draw this path instead of the pair template. */
+  path?: Array<[number, number]>;
 }
 export const ONROUTE: RouteTruck[] = [
-  { id: 'T-11', drv: 'Driver 11', pair: 'POLB>ONT', f: 0.4, sit: 'bad', sitT: 'Decide', delta: -22, fat: 58, driven: '5h 40m', next: 'Rest stop (Industry Hills) in 4 mi', prob: true, short: 'SR-60 closed ahead', cargo: 'C-4401 · Apparel → Ontario Fulfillment' },
-  { id: 'T-12', drv: 'Driver 12', pair: 'POLB>FON', f: 0.36, sit: 'warn', sitT: 'Slowed', delta: -14, fat: 82, driven: '9h 10m', next: 'Mandatory break due in 1h 50m', prob: true, short: 'I-605 slowdown', cargo: 'C-4402 · Furniture → Fontana Hub' },
-  { id: 'T-13', drv: 'Driver 13', pair: 'POLB>SFS', f: 0.55, sit: 'ok', sitT: 'On track', delta: 12, fat: 30, driven: '3h 05m', next: 'Arrives 10:25 AM', prob: false, short: 'On schedule', cargo: 'C-4403 · Retail → Santa Fe Springs DC' },
-  { id: 'T-14', drv: 'Driver 14', pair: 'POLA>VER', f: 0.9, sit: 'bad', sitT: 'Held', delta: -35, fat: 63, driven: '6h 30m', next: 'Vernon gate: ~50 min dock queue', prob: true, wants: 'Wants to end shift after this job', short: 'Vernon dock queue', cargo: 'C-4455 · Perishable → Vernon DC' },
+  { id: 'T-11', drv: 'Ravi', pair: 'POLB>ONT', f: 0.4, sit: 'bad', sitT: 'Decide', delta: -22, fat: 58, driven: '5h 40m', next: 'Rest stop (Industry Hills) in 4 mi', prob: true, short: 'SR-60 closed ahead', cargo: 'C-4401 · Apparel → Ontario Fulfillment' },
+  { id: 'T-12', drv: 'Carmen', pair: 'POLB>FON', f: 0.36, sit: 'warn', sitT: 'Slowed', delta: -14, fat: 82, driven: '9h 10m', next: 'Mandatory break due in 1h 50m', prob: true, short: 'I-605 slowdown', cargo: 'C-4402 · Furniture → Fontana Hub' },
+  { id: 'T-13', drv: 'Theo', pair: 'POLB>SFS', f: 0.55, sit: 'ok', sitT: 'On track', delta: 12, fat: 30, driven: '3h 05m', next: 'Arrives 10:25 AM', prob: false, short: 'On schedule', cargo: 'C-4403 · Retail → Santa Fe Springs DC' },
+  { id: 'T-14', drv: 'Lina', pair: 'POLA>VER', f: 0.9, sit: 'bad', sitT: 'Held', delta: -35, fat: 63, driven: '6h 30m', next: 'Vernon gate: ~50 min dock queue', prob: true, wants: 'Wants to end shift after this job', short: 'Vernon dock queue', cargo: 'C-4455 · Perishable → Vernon DC' },
 ];
+
+/** George joins On route after Dispatch (demo). Uses POLB→ONT polyline as stand-in for POLB→Claremont. */
+export const GEORGE_ONROUTE: RouteTruck = {
+  id: 'T-G',
+  drv: 'George',
+  pair: 'POLB>ONT',
+  f: 0.12,
+  sit: 'ok',
+  sitT: 'En route',
+  delta: 22,
+  fat: 28,
+  driven: '0h 40m',
+  next: 'Claremont window 10:00–11:30 AM',
+  prob: false,
+  short: 'Port of Long Beach → Claremont',
+  cargo: 'C-102 · Import containers → Claremont',
+};
 
 export const OBJ: Record<string, string> = { eff: 'Efficiency', com: 'Community', sus: 'Sustainability', drv: 'Driver wellbeing', cus: 'Keeps commitment' };
 
@@ -80,15 +99,25 @@ export interface Problem {
   quick: string[];
 }
 export const PROB: Record<string, Problem> = {
+  'T-G': {
+    head: 'En route to Claremont', src: 'Dispatched · Live GPS', sev: 'ok',
+    opts: [],
+    chat: [
+      ['sys', 'now', 'George dispatched Port of Long Beach → Claremont.'],
+      ['them', 'now', 'Rolling. Confirming my window.'],
+      ['me', 'now', 'Copy. Call if anything changes.'],
+    ],
+    quick: ['Ask for ETA', 'Send restroom stops'],
+  },
   'T-11': {
     head: 'SR-60 East closed ahead', src: 'Caltrans, until 4:00 PM', sev: 'bad',
     opts: [
-      { t: 'Reroute via I-10 East', obj: 'eff', s: 'Stays on freeways; passes 3 school zones near Pomona exits.', eta: '+9 min', mi: '+4 mi', co2: '+7 kg', cost: '+$14', comm: '88', drv: 'Fatigue 61%',
-        why: ['Lowest added time of the routes that avoid the closed SR-60.', 'No incidents reported on I-10 right now (Caltrans live).'], tags: [['Rain', 'Light rain near Pomona', 'warn'], ['Schools', '3 school zones', 'warn']] },
+      { t: 'Faster route via I-10 East', obj: 'eff', s: 'Best recovery time around the closure; stays on freeways.', eta: '−8 min', mi: '+4 mi', co2: '+7 kg', cost: '+$14', comm: '88', drv: 'Fatigue 61%', rec: true,
+        why: ['Fastest path that clears the SR-60 block.', 'Recovers about 8 min vs sitting in the backup.', 'No incidents reported on I-10 right now (Caltrans live).'], tags: [['Rain', 'Light rain near Pomona', 'warn'], ['Schools', '3 school zones', 'warn']] },
       { t: 'Reroute via SR-91 / SR-57', obj: 'com', s: 'Longer, but avoids all local streets.', eta: '+14 min', mi: '+6 mi', co2: '+10 kg', cost: '+$22', comm: '93', drv: 'Fatigue 63%',
-        why: ['Best community score: all freeway, no local streets.', 'Versus option 1: 5 more minutes, 3 fewer school zones.'], tags: [['Traffic', 'SR-57 busy (38 mph)', 'warn']] },
-      { t: 'Rest 20 min, then I-10; ask Ontario for +30 min', obj: 'drv', s: 'Driver 11 stops at Industry Hills first; Ontario moves the appointment.', eta: '+35 min', mi: '+4 mi', co2: '+9 kg', cost: '+$31', comm: '88', drv: 'Fatigue 52% (rested)', rec: true,
-        why: ['Driver 11 has driven 5h 40m and asked for a restroom: fatigue 58% → 52%.', 'Ontario is 44/60 booked, so a later slot exists.'], tags: [['Partner', 'Ontario must approve +30 min', 'warn']] },
+        why: ['Best community score: all freeway, no local streets.', 'Versus faster route: 5 more minutes, 3 fewer school zones.'], tags: [['Traffic', 'SR-57 busy (38 mph)', 'warn']] },
+      { t: 'Rest 20 min, then I-10; ask Ontario for +30 min', obj: 'drv', s: 'Ravi stops at Industry Hills first; Ontario moves the appointment.', eta: '+35 min', mi: '+4 mi', co2: '+9 kg', cost: '+$31', comm: '88', drv: 'Fatigue 52% (rested)',
+        why: ['Ravi has driven 5h 40m and asked for a restroom: fatigue 58% → 52%.', 'Ontario is 44/60 booked, so a later slot exists.'], tags: [['Partner', 'Ontario must approve +30 min', 'warn']] },
     ],
     chat: [
       ['them', '9:12', 'Passing Carson, all good. Loaded and moving.'],
@@ -103,11 +132,11 @@ export const PROB: Record<string, Problem> = {
   'T-12': {
     head: 'I-605 North slowed to ~18 mph', src: 'CHP, unverified', sev: 'warn',
     opts: [
+      { t: 'Faster route via I-105 → I-5', obj: 'eff', s: 'Cuts around the 605 crawl; uses local connector streets near 2 schools.', eta: '−11 min', mi: '+5 mi', co2: '+8 kg', cost: '+$16', comm: '71', drv: 'Fatigue 84%', rec: true,
+        why: ['Fastest recovery from the slowdown.', 'Saves about 11 min vs staying in the crawl.', 'Community score 71/100; nearer the hours limit.'], tags: [['Schools', '2 schools on local streets', 'bad']] },
       { t: 'Stay on I-605, ask Fontana for +20 min', obj: 'sus', s: 'No extra miles; arrival uncertain until the collision clears.', eta: '+20 min', mi: '0 mi', co2: '+5 kg', cost: '+$18', comm: '92', drv: 'Fatigue 85% (near limit)',
-        why: ['Lowest extra CO₂ (no added miles).', 'Driver 12 is at 85% fatigue with ~1h 50m left.'], tags: [['Time', 'Arrival uncertain', 'warn'], ['Traffic', 'CHP report unverified', 'warn']] },
-      { t: 'Detour via I-105 → I-5', obj: 'eff', s: 'Faster, but uses local connector streets near 2 schools.', eta: '+6 min', mi: '+5 mi', co2: '+8 kg', cost: '+$16', comm: '71', drv: 'Fatigue 84%',
-        why: ['Smallest delay.', 'Community score 71/100; pushes the driver closer to the legal limit.'], tags: [['Schools', '2 schools on local streets', 'bad']] },
-      { t: 'Take the mandatory break now (30 min)', obj: 'drv', s: 'Whittier truck stop. Resets the driver’s clock; arrives after the slowdown clears.', eta: '+30 min', mi: '+1 mi', co2: '+3 kg', cost: '+$28', comm: '94', drv: 'Fatigue 40% (rested)', rec: true,
+        why: ['Lowest extra CO₂ (no added miles).', 'Carmen is at 85% fatigue with ~1h 50m left.'], tags: [['Time', 'Arrival uncertain', 'warn'], ['Traffic', 'CHP report unverified', 'warn']] },
+      { t: 'Take the mandatory break now (30 min)', obj: 'drv', s: 'Whittier truck stop. Resets the driver’s clock; arrives after the slowdown clears.', eta: '+30 min', mi: '+1 mi', co2: '+3 kg', cost: '+$28', comm: '94', drv: 'Fatigue 40% (rested)',
         why: ['The break is due within 1h 50m anyway.', 'Fatigue 82% → 40%. Fontana has room for a +30 min slot.'], tags: [['Partner', 'Fontana must move slot', 'warn']] },
     ],
     chat: [
@@ -129,12 +158,12 @@ export const PROB: Record<string, Problem> = {
   'T-14': {
     head: 'Vernon dock queue ~50 min', src: 'Warehouse report; docks 5–6 down until 1:30 PM', sev: 'warn',
     opts: [
+      { t: 'Faster route to Commerce Cross-Dock (9 mi)', obj: 'eff', s: 'Open docks now; fastest drop. Needs customer approval.', eta: '−17 min', mi: '+9 mi', co2: '+16 kg', cost: '+$30', comm: '78', drv: 'Home sooner', rec: true,
+        why: ['Fastest way to clear the late arrival.', 'Recovers about 17 min vs waiting in the Vernon queue.', 'Adds local streets near Bell Gardens (community 78).'], tags: [['Schools', '2 schools on local streets', 'bad'], ['Partner', 'Customer must approve', 'warn']] },
       { t: 'Wait in the queue', obj: 'cus', s: 'Keeps the customer’s slot and the cold chain intact.', eta: '+50 min', mi: '0 mi', co2: '+7 kg', cost: '+$42', comm: '95', drv: 'Idle 50 min',
-        why: ['Idling adds about 7 kg CO₂.', 'Driver 14 has 1h 20m left and wants to go home: this uses most of it.'], tags: [['Time', 'Driver idles 50 min', 'warn']] },
-      { t: 'Redirect to Commerce Cross-Dock (9 mi)', obj: 'eff', s: 'Open docks; needs customer approval.', eta: '+18 min', mi: '+9 mi', co2: '+16 kg', cost: '+$30', comm: '78', drv: 'Home sooner',
-        why: ['Fastest way to drop the container.', 'Adds local streets near Bell Gardens (community 78).'], tags: [['Schools', '2 schools on local streets', 'bad'], ['Partner', 'Customer must approve', 'warn']] },
-      { t: 'Reschedule to 1:30 PM, release the driver', obj: 'drv', s: 'Matches the driver’s request; truck returns for tomorrow.', eta: 'Next slot', mi: '0 mi', co2: '−4 kg', cost: '+$20', comm: '96', drv: 'Ends shift now', rec: true,
-        why: ['Driver 14 asked to finish after this job.', 'Vernon docks reopen at 1:30 PM. Container needs a powered yard spot.'], tags: [['Cold chain', 'Needs a powered yard spot', 'warn']] },
+        why: ['Idling adds about 7 kg CO₂.', 'Lina has 1h 20m left and wants to go home: this uses most of it.'], tags: [['Time', 'Driver idles 50 min', 'warn']] },
+      { t: 'Reschedule to 1:30 PM, release the driver', obj: 'drv', s: 'Matches the driver’s request; truck returns for tomorrow.', eta: 'Next slot', mi: '0 mi', co2: '−4 kg', cost: '+$20', comm: '96', drv: 'Ends shift now',
+        why: ['Lina asked to finish after this job.', 'Vernon docks reopen at 1:30 PM. Container needs a powered yard spot.'], tags: [['Cold chain', 'Needs a powered yard spot', 'warn']] },
     ],
     chat: [
       ['them', '9:05', 'At Vernon gate, 6 trucks ahead of me.'],

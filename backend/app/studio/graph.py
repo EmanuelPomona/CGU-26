@@ -128,6 +128,27 @@ def nearest_edge_point(
     return best
 
 
+def nearest_polyline_point(
+    lat: float, lng: float, geometry: list[list[float]], max_km: float = 50.0
+) -> tuple[tuple[float, float], float] | None:
+    """Nearest point on a lat/lng polyline; returns (snapped_latlng, dist_m)."""
+    if not geometry:
+        return None
+    p = (lat, lng)
+    limit = max_km * 1000.0
+    if len(geometry) == 1:
+        d = hav_m(p, (geometry[0][0], geometry[0][1]))
+        return ((geometry[0][0], geometry[0][1]), d) if d <= limit else None
+    best: tuple[tuple[float, float], float] | None = None
+    for i in range(1, len(geometry)):
+        a = (geometry[i - 1][0], geometry[i - 1][1])
+        b = (geometry[i][0], geometry[i][1])
+        c, d = _closest_on_seg(p, a, b)
+        if d <= limit and (best is None or d < best[1]):
+            best = (c, d)
+    return best
+
+
 def edge_endpoints(g: RoadGraph, e: Edge) -> tuple[tuple[float, float], tuple[float, float]]:
     u, v = g.nodes[e.u], g.nodes[e.v]
     return (u.lat, u.lng), (v.lat, v.lng)
@@ -146,6 +167,13 @@ def edge_obstacle_fraction(g: RoadGraph, e: Edge, obs: StudioObstacle) -> float:
         if hav_m((lat, lng), (obs.lat, obs.lng)) <= obs.radius_km * 1000.0:
             hits += 1
     return hits / (samples + 1)
+
+
+def edge_intersects_obstacle(g: RoadGraph, e: Edge, obs: StudioObstacle) -> bool:
+    """True if the edge comes within the obstacle radius (any intersection)."""
+    a, b = edge_endpoints(g, e)
+    _, dist_m = _closest_on_seg((obs.lat, obs.lng), a, b)
+    return dist_m <= obs.radius_km * 1000.0
 
 
 def path_geometry(g: RoadGraph, node_ids: list[str]) -> list[list[float]]:
